@@ -1,0 +1,41 @@
+\section{Introduction}
+\label{sec:intro}
+
+Clinical trials fail or are delayed far more often for lack of participants than for lack of
+scientific merit, and pre-screening patients against free-text eligibility criteria is a laborious
+manual step. Each trial lists inclusion and exclusion criteria in natural language; a coordinator must
+read a patient's notes and decide, criterion by criterion, whether the patient meets it, does not meet
+it, or whether the record simply does not say. Large language models (LLMs) are a natural fit for this
+reading task, and TrialGPT~\cite{jin2024trialgpt} showed that GPT-4 can produce criterion-level
+judgements with sentence-level evidence that agree well with clinicians.
+
+Relying on a proprietary API is, however, unattractive for patient data and impossible in the
+setting of this work, which requires a freely available, locally executable model. This paper
+therefore asks how far a \emph{small open-weight decoder} can be pushed on the same task when it is
+fine-tuned on the expert annotations released with TrialGPT, and how such a model can be served
+efficiently on commodity hardware.
+
+\textbf{Problem statement.} Given a patient note split into numbered sentences, a criterion type
+(inclusion or exclusion) and the criterion text, predict (i) one of the dataset's four expert labels
+for that criterion type and (ii) the set of patient sentence IDs that support the decision. The
+labels deliberately include \emph{not enough information} and \emph{not applicable}; collapsing them
+into a binary decision, or treating missing evidence as proof of (in)eligibility, would be unsafe.
+
+\textbf{Contributions.}
+\begin{enumerate}
+\item A reproducible, leakage-checked pipeline on the TrialGPT Criterion Annotations with the
+prescribed patient-grouped 37/8/8 split, and LoRA fine-tuning of Qwen2.5-1.5B-Instruct that raises
+held-out accuracy from \TBD{} to \TBD{} and macro-F1 from \TBD{} to \TBD{} (Section~\ref{sec:results}).
+\item A controlled ablation of answer order, rare-class oversampling and training length, with a
+paired bootstrap showing which differences are and are not reliable on a validation set with only a
+handful of minority-class examples.
+\item A hand-written Qwen2 forward pass with an explicit pre-allocated KV cache, verified to be
+token-identical to uncached recomputation and to Hugging Face greedy decoding, extended with prefix
+reuse across the criteria of one patient.
+\item A tiled attention kernel with online softmax, verified against a float64 reference and PyTorch
+SDPA, and usable as a drop-in attention backend of the real model.
+\item Greedy speculative decoding with a fine-tuned 0.5B draft model, with cache rollback, verified
+token-equivalence and measured acceptance, latency and memory.
+\item A Dockerized React/FastAPI screening application that exposes evidence-linked results,
+explicit outcome aggregation, report export and live inference benchmarks.
+\end{enumerate}

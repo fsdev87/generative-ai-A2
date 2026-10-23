@@ -71,3 +71,24 @@ main run, so environment and memory failures cost seconds of GPU time, not minut
 Zero-shot predicts `excluded` for 110/140 exclusion criteria (polarity confusion). After
 fine-tuning, rare classes (`not included`, `excluded`, inclusion `not applicable`) have 0 recall,
 motivating the oversampling ablation.
+
+## Ablations (validation only; best epoch by val macro-F1)
+
+| Variant | Best ep | Acc | Macro-F1 | Ev. micro-F1 | Train s (T4) |
+|---|---|---|---|---|---|
+| main: evidence-first, r16, 3 ep | 3 | 0.748 | 0.446 | 0.544 | 809 |
+| + rare-label oversampling (sqrt, cap 8; 602 -> 1,060 ex/epoch) | 1 | 0.738 | 0.526 | 0.489 | 1,290 |
+| label-first answer order | 3 | 0.743 | 0.545 | 0.551 | 822 |
+| 5 epochs | 5 | 0.752 | 0.454 | 0.577 | 1,378 |
+| draft Qwen2.5-0.5B, main recipe (zero-shot 0.063 / 0.022 / 0.0) | 2 | 0.733 | 0.430 | 0.448 | 457 |
+
+* Per-class counts show label-first's +0.10 macro-F1 comes from **one** extra correct `excluded`
+  (1/2 vs 0/2); val has 3 `not included`, 2 `excluded`, 1 inclusion `not applicable`.
+* Oversampling shifts recall toward minority classes (included 23->32/35, exclusion NEI 7->13/26)
+  at the cost of `not excluded` (95->82/101); val loss rises after epoch 1 (overfitting the repeats).
+* Paired bootstrap over val annotations (B=2000, `results/ablations/bootstrap_vs_main.json`): no
+  variant's accuracy, macro-F1 or evidence-F1 difference vs main has a 95% CI excluding 0;
+  oversampling lowers evidence F1 in 95.2% of resamples.
+* **Decision:** keep the pre-declared selection rule (best val macro-F1) -> label-first r16 3 ep,
+  reporting that its advantage is not statistically reliable. The draft is retrained label-first so
+  its outputs follow the same schema as the target (otherwise acceptance would collapse).

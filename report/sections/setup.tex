@@ -1,0 +1,48 @@
+\section{Experimental Setup and Metrics}
+\label{sec:setup}
+
+\textbf{Hardware and software.} Training, evaluation and GPU benchmarks ran as non-interactive
+Kaggle script jobs on one NVIDIA Tesla T4 (15\,GB usable, fp16, no bf16), PyTorch~2.11 (CUDA~12.8),
+Transformers~5.20 and PEFT~0.21. Each job clones the repository at a recorded commit, runs, and
+exits so the GPU is released immediately; a short preflight on the longest examples precedes every
+training run so that environment or memory errors cost seconds rather than minutes. The application
+and the CPU measurements ran on a laptop with an Intel Core i5-1135G7 (4 cores) and 16\,GB RAM,
+PyTorch~2.14 (CPU) in fp32. In total all GPU experiments used \TBD{} of the free 30-hour weekly quota.
+
+\textbf{Decoding settings.} All reported predictions use greedy decoding (argmax), at most 64 new
+tokens, batch size 16 for evaluation, and \code{repetition\_penalty}$=1.0$. The latter matters:
+Qwen's shipped generation configuration enables sampling and a repetition penalty of 1.1, and the
+library applies the penalty even when sampling is disabled. We found this when our own decoder
+disagreed with library greedy decoding at the third token; with the penalty disabled the two agree
+token for token. The zero-shot baseline and the fine-tuned model use the identical prompt, examples
+and decoding settings.
+
+\textbf{Classification metrics.} We report accuracy, macro-F1, per-class precision, recall and F1, and
+confusion matrices, overall and separately for inclusion and exclusion criteria. Unparseable outputs
+count as a separate \emph{invalid} prediction and are always wrong. Macro-F1 averages over the gold
+classes present in the evaluated subset; a class with no gold examples (e.g.\ \emph{excluded} in the
+test split) has undefined recall and is reported but not averaged, rather than being silently scored
+as 0 or 1. Because the overall label space merges the two criterion types, the shared labels
+(\emph{not enough information}, \emph{not applicable}) form single classes in the overall figures.
+
+\textbf{Evidence metrics.} Predictions and gold annotations are sets of original sentence IDs.
+\emph{Micro} precision/recall/F1 sum true positives, false positives and false negatives over all
+records; records with an empty gold set contribute every predicted ID as a false positive.
+\emph{Macro} scores average per-record precision, recall and F1 over records with a \emph{non-empty}
+gold set (precision is 0 when nothing is predicted). For the 56--70\% of records whose gold set is
+empty we report \emph{empty-gold agreement}: the fraction where the model also cites nothing. Absent
+evidence is never interpreted as a label.
+
+\textbf{Statistical comparison.} Ablations are compared with a paired bootstrap over validation
+annotations (2,000 resamples): for each resample we compute the metric difference between a variant
+and the main run, and report the mean difference, its 95\% percentile interval and the fraction of
+resamples in which the variant is better.
+
+\textbf{Timing protocol.} Benchmarks use batch size 1 and the same model, weights and inputs for every
+mode. Each configuration is run once for warm-up and then repeated (3 times for decoding, 10 for
+attention); we report the median. CUDA is synchronized before every clock read, so asynchronous
+kernel launches cannot hide work. \emph{Prefill} time is measured up to the first generated token
+(including the first argmax), \emph{decode} time covers the remaining tokens, and tokens/s is output
+tokens divided by total time. Peak memory is the CUDA allocator peak after resetting its statistics.
+For fixed-length comparisons the end-of-sequence token is ignored so every mode generates the same
+number of tokens.

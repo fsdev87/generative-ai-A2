@@ -1,0 +1,306 @@
+\section{Materials and Methods}
+\label{sec:methods}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=4mm and 6mm,
+  box/.style={draw, rounded corners=2pt, align=center, font=\scriptsize, minimum height=8mm, inner sep=3pt},
+  data/.style={box, fill=blue!6},
+  proc/.style={box, fill=green!7},
+  ui/.style={box, fill=orange!10},
+  arr/.style={-{Stealth[length=2mm]}, semithick}]
+\node[data] (ds) {TrialGPT Criterion\\Annotations (1,015)};
+\node[proc, right=of ds] (split) {drop GPT-4 columns\\patient split 37/8/8\\(rng 42) + manifest};
+\node[proc, right=of split] (prompt) {numbered note +\\criterion $\rightarrow$ chat prompt\\target: JSON label+IDs};
+\node[proc, right=of prompt] (lora) {LoRA fine-tuning\\Qwen2.5-1.5B (T4)\\val selection};
+\node[data, right=of lora] (adapter) {adapter\\(HF Hub)};
+\node[proc, below=9mm of prompt] (dec) {own Qwen2 forward\\explicit KV cache\\+ prefix reuse};
+\node[proc, left=of dec] (attn) {attention backend:\\SDPA / reference /\\tiled online-softmax};
+\node[proc, right=of dec] (spec) {greedy speculative\\decoding (0.5B draft)\\cache rollback};
+\node[proc, right=of spec] (post) {parse JSON, verify IDs,\\evidence-only explanation,\\rule aggregation};
+\node[ui, left=of attn] (ui) {React UI\\FastAPI server\\(Docker)};
+\draw[arr] (ds) -- (split);
+\draw[arr] (split) -- (prompt);
+\draw[arr] (prompt) -- (lora);
+\draw[arr] (lora) -- (adapter);
+\draw[arr] (adapter) |- ($(spec.north)+(0,3mm)$) -- (spec.north);
+\draw[arr] (attn) -- (dec);
+\draw[arr] (dec) -- (spec);
+\draw[arr] (spec) -- (post);
+\draw[arr] (ui) -- node[above, font=\tiny]{note, criteria} (attn);
+\draw[arr] (post.south) -- ++(0,-4mm) -| node[pos=0.25, below, font=\tiny]{streamed results, report, benchmarks} (ui.south);
+\end{tikzpicture}
+\caption{System overview. Top: data preparation and supervised adaptation. Bottom: the inference
+stack used by the application, built on our own decoder, attention and decoding implementations.}
+\label{fig:overview}
+\end{figure*}
+
+Fig.~\ref{fig:overview} summarizes the system: the upper row prepares the data and adapts the model,
+the lower row is the inference stack used for evaluation benchmarks and by the application.
+
+\subsection{Dataset and split}
+\label{sec:data}
+The TrialGPT Criterion Annotations~\cite{jin2024trialgpt} contain 1,015 patient--criterion pairs
+from 53 SIGIR-2016 patients~\cite{koopman2016test} and 103 trials. Each record holds the patient
+note, already split into numbered sentences (3--14 per note, at most 235 words), the criterion type
+and text, the expert eligibility label and the expert evidence sentence IDs. The record also stores
+GPT-4's label, explanation and cited sentences, a judgement of that explanation
+(\code{explanation\_correctness}) and the original authors' own \code{training} flag. All five fields
+are removed when the dataset is loaded, so they cannot reach a prompt, a target or a metric.
+
+The split follows the assignment protocol exactly: the 53 unique patient IDs are sorted,
+shuffled with \code{numpy.random.default\_rng(42)}, and the first 37 go to training, the next 8 to
+validation and the last 8 to testing. Every annotation of a patient therefore lives in exactly one
+split; the preparation script asserts disjoint patient sets, single assignment of every annotation
+and absence of leaky fields, and writes a manifest with patient IDs and label counts.
+Table~\ref{tab:split} shows the resulting distribution. The label distribution is heavily skewed:
+\emph{not excluded} accounts for almost half of all records, while \emph{excluded} occurs only 10
+times overall and \emph{not at all} in the test split. One training annotation (ID 883) has an empty
+criterion text; it remains assigned to its patient's split in the manifest but is excluded from
+training because no task can be posed for it.
+
+\begin{table}[t]
+\centering
+\caption{Patient-grouped split (seed 42) and label distribution.}
+\label{tab:split}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrr}
+\toprule
+ & & Train & Val & Test \\
+\midrule
+\multicolumn{2}{l}{Patients} & 37 & 8 & 8 \\
+\multicolumn{2}{l}{Annotations (used)} & 602 & 206 & 206 \\
+\multicolumn{2}{l}{\quad with gold evidence} & 254 & 90 & 61 \\
+\midrule
+\multirow{4}{*}{Inclusion} & included & 88 & 35 & 27 \\
+ & not included & 13 & 3 & 7 \\
+ & not enough information & 109 & 27 & 38 \\
+ & not applicable & 5 & 1 & 3 \\
+\midrule
+\multirow{4}{*}{Exclusion} & excluded & 8 & 2 & 0 \\
+ & not excluded & 291 & 101 & 91 \\
+ & not enough information & 65 & 26 & 28 \\
+ & not applicable & 23 & 11 & 12 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Input/output format and tokenization}
+\label{sec:format}
+Each example becomes a two-turn chat in the model's template: a system message that frames the task
+and states that missing information is never proof of eligibility or ineligibility, and a user
+message with the numbered note, the criterion type, the criterion text, a one-line definition of each
+of the four labels for that criterion type, and the required output schema. The target is a single
+JSON object, e.g.\ \code{\{"label": "included", "evidence": [0, 3]\}}, followed by the end-of-turn
+token. The four label sets are kept separate for inclusion and exclusion criteria, so the model always
+chooses among the labels that are valid for the given type.
+
+With the Qwen2.5 tokenizer (byte-level BPE, 151,665 tokens) prompts are 256--625 tokens long and
+targets 12--38 tokens; the longest prompt plus target is 651 tokens. We therefore set the maximum
+sequence length to 768, which means \emph{no example is truncated}. The training code raises an error
+instead of truncating, and the application rejects (with a clear message) any input above 2,048
+tokens, because silently cutting the note could remove exactly the evidence a decision depends on.
+
+Generated text is parsed by extracting the first JSON object; a label outside the type's label set is
+invalid, and cited IDs that do not exist in the note are discarded. If the JSON is malformed but a
+valid label string appears, the label is recovered and the record is flagged.
+
+\subsection{Model selection}
+\label{sec:model}
+Table~\ref{tab:models} compares the candidates we considered. All are decoder-only Transformers with
+RoPE, RMSNorm, SwiGLU and GQA, so all support the required KV-cache and speculative-decoding work. Two
+constraints dominated the choice: LoRA training must fit one free 16\,GB T4 GPU, and the application
+must run on a CPU-only laptop with 16\,GB RAM. Speculative decoding additionally requires a smaller
+model with an \emph{identical tokenizer}.
+
+\begin{table}[t]
+\centering
+\caption{Candidate open-weight decoders (values from the model configurations).}
+\label{tab:models}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{lcccc}
+\toprule
+ & Qwen2.5 & Qwen2.5 & Llama 3.2 & Llama 3.2 \\
+ & 1.5B-Instr. & 0.5B-Instr. & 1B-Instr. & 3B-Instr. \\
+\midrule
+Parameters & 1.54B & 0.49B & 1.24B & 3.21B \\
+Layers / hidden & 28 / 1536 & 24 / 896 & 16 / 2048 & 28 / 3072 \\
+Q / KV heads & 12 / 2 & 14 / 2 & 32 / 8 & 24 / 8 \\
+Head dim & 128 & 64 & 64 & 128 \\
+Vocabulary & 151,936 & 151,936 & 128,256 & 128,256 \\
+Context & 32K & 32K & 128K & 128K \\
+KV cache / token (fp16) & 28\,KB & 12\,KB & 32\,KB & 112\,KB \\
+Weights fp16 / fp32 & 3.1 / 6.2\,GB & 1.0 / 2.0\,GB & 2.5 / 5.0\,GB & 6.4 / 12.8\,GB \\
+License & Apache-2.0 & Apache-2.0 & Llama 3.2 & Llama 3.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+We selected \textbf{Qwen2.5-1.5B-Instruct} as the target and \textbf{Qwen2.5-0.5B-Instruct} as the
+draft. The pair shares one tokenizer and chat template, is Apache-2.0 licensed with ungated downloads,
+and the target's aggressive GQA (12 query heads, 2 KV heads) gives the smallest KV cache per token of
+the larger candidates. Its fp32 weights (6.2\,GB) fit the laptop's RAM for CPU inference, whereas
+Llama~3.2-3B (12.8\,GB in fp32) does not leave room for the draft, the cache and the OS. The
+Llama~3.2-1B/3B pair was a viable alternative; we rejected it because of the gated license, the
+larger KV cache of the 3B model, and because a 1B target would leave too little room between target
+and draft for speculative decoding to pay off.
+
+\subsection{Supervised fine-tuning}
+\label{sec:finetune}
+We adapt all seven linear projections of every layer ($W_q, W_k, W_v, W_o$ and the gate, up and down
+projections of the MLP) with LoRA~\cite{hu2022lora}: $W' = W + \frac{\alpha}{r}BA$ with rank $r=16$,
+$\alpha=32$ and dropout 0.05, i.e.\ 18.5M trainable parameters (1.18\%). The objective is the causal
+language-modelling cross-entropy on the \emph{answer tokens only}; prompt positions are masked with
+$-100$ so the model is not trained to reproduce notes or criteria. The frozen base weights are loaded
+in fp16 (the T4 has no native bf16), adapters are kept in fp32, and training uses automatic mixed
+precision with dynamic loss scaling.
+
+The training loop is written in plain PyTorch rather than with a trainer abstraction: AdamW,
+learning rate $2\cdot10^{-4}$ with 5\% linear warm-up and cosine decay, gradient clipping at 1.0,
+micro-batch 2 with 4 accumulation steps (effective batch 8), 3 epochs, seed 42. A micro-batch of 4
+ran out of GPU memory: with a 151,936-word vocabulary the fp32 logits of a single micro-batch of four
+651-token sequences occupy $4\cdot651\cdot151{,}936\cdot4$\,B $\approx$ 1.6\,GB, and several copies
+exist during the loss and backward computation. Gradient checkpointing keeps the peak at 5.5\,GB.
+After every epoch the adapter is saved, the teacher-forced validation loss is computed, and the
+validation split is decoded greedily and scored; the epoch with the highest validation macro-F1 is
+kept. The test split is read only by the final evaluation command (Section~\ref{sec:setup}).
+
+\textbf{Ablations.} Three alternatives were trained with otherwise identical settings and compared on
+validation only: (i) \emph{label-first} answer order versus the \emph{evidence-first} order of our
+initial design, which asks the model to commit to evidence before the label; (ii) \emph{rare-class
+oversampling}, which repeats every training example $\min(8,\operatorname{round}(\sqrt{n_{\max}/n_c}))$
+times per epoch, where $n_c$ is the count of its (criterion type, label) class (602 $\rightarrow$
+1,060 examples per epoch); (iii) training for 5 instead of 3 epochs. The 0.5B draft model is
+fine-tuned with the same recipe and the selected answer order.
+
+\subsection{Explicit KV-cached decoding}
+\label{sec:kv}
+To control every step of cached decoding we implemented the Qwen2 forward pass ourselves on top of
+the trained weight tensors (embedding, projections, norms); only the linear layers are reused as
+modules. Per layer: $x \leftarrow h + W_o\,\mathrm{Attn}(\mathrm{RoPE}(W_q\bar h + b_q),
+\mathrm{RoPE}(W_k\bar h + b_k), W_v\bar h + b_v)$ with $\bar h = \mathrm{RMSNorm}(h)$, followed by
+$h \leftarrow x + W_d(\mathrm{SiLU}(W_g\bar x)\odot W_u\bar x)$.
+
+\textbf{Cache layout and growth.} The cache holds, for each of the 28 layers, a key and a value
+tensor of shape $(B, H_{kv}{=}2, L_{\max}, 128)$ that is \emph{pre-allocated} for the prompt length
+plus the generation budget; a single integer \code{length} marks the valid prefix. A forward call on
+$T$ new tokens at absolute position $p$ writes their keys and values into slots $p\ldots p{+}T{-}1$
+and attends over slots $0\ldots p{+}T{-}1$. Growth therefore costs $O(1)$ per token instead of the
+$O(n)$ reallocation of repeated concatenation, and rollback (needed by speculative decoding and by
+prefix reuse) is just lowering \code{length}. Memory grows linearly: $2 \cdot 28 \cdot 2 \cdot 128$
+values, i.e.\ 28\,KB per token in fp16. Keys and values are stored with the 2 KV heads and expanded to
+the 12 query heads only inside attention, so GQA's 6$\times$ saving is kept.
+
+\textbf{Positional handling.} RoPE rotates queries and keys by angles $\theta_i\,m$ that depend on
+the absolute position $m$; cached keys were rotated when they were written. New tokens must therefore
+be rotated with $m = p, \ldots, p{+}T{-}1$ rather than $0\ldots T{-}1$, otherwise their relative
+offsets to the cached keys would be wrong. Our forward pass takes $p$ explicitly and computes
+$\cos/\sin$ tables for exactly those positions (base $\theta = 10^6$).
+
+\textbf{Masking.} With $T$ new queries and $p+T$ keys, query $i$ may attend key $j$ iff
+$j \le i + p$: a causal mask aligned to the \emph{bottom-right} of the $T\times(p{+}T)$ score matrix.
+PyTorch's \code{is\_causal} flag aligns to the top-left, which is only correct when $p=0$; we pass the
+bottom-right mask explicitly when $p>0$ and $T>1$. For single-token decode steps ($T=1$) no mask is
+needed because every cached position is in the past.
+
+\textbf{Prefix reuse.} In the application all criteria of one patient share the system prompt and
+the note. The cache remembers which token IDs its valid slots belong to; a new prompt reuses the
+longest common token prefix (keeping at least one token to produce logits), crops the rest, and
+prefills only the new suffix.
+
+\textbf{Reference path and numerics.} The uncached reference allocates a fresh cache and runs the
+full sequence at every step, i.e.\ $O(n^2)$ total work for $n$ tokens. In exact arithmetic both paths
+compute the same logits. In floating point they need not be bitwise identical: the cached path
+computes the new token's projections as a $1\times d$ product while the reference computes them as one
+row of a $T\times d$ product, and different matrix shapes select different kernels and summation
+orders. Differences are of the order of float rounding and can flip a greedy argmax only when the top
+two logits are within that margin, which we test for explicitly (Section~\ref{sec:res-kv}).
+
+\subsection{Tiled attention with online softmax}
+\label{sec:tiled}
+The reference attention computes $S = QK^\top/\sqrt{d}$, applies the mask with $-\infty$, subtracts
+the row maximum before exponentiation and normalizes; it materializes the full $L_q\times L_k$ score
+matrix. The tiled variant (Algorithm~\ref{alg:tiled}) processes queries in blocks of $B_q$ rows and
+streams over key/value blocks of $B_k$ columns, keeping per row a running maximum $m$, a running
+normalizer $\ell$ and an unnormalized output accumulator $o$~\cite{milakov2018online,dao2022flashattention}.
+When a new block raises the maximum, previous contributions are rescaled by $e^{m-m'}$, so the result
+is exactly softmax-weighted, while only a $B_q\times B_k$ tile of scores exists at any time. Under
+causal masking, key blocks entirely above the diagonal are skipped. Half-precision inputs are
+accumulated in fp32. Rows whose blocks are fully masked keep $m=-\infty$, so the subtraction uses a
+safe maximum of 0 to avoid $-\infty-(-\infty)$.
+
+\begin{algorithm}[t]
+\caption{Tiled attention with online softmax (one query block)}
+\label{alg:tiled}
+\begin{algorithmic}[1]
+\Require $Q_b\in\mathbb{R}^{B_q\times d}$, $K, V\in\mathbb{R}^{L_k\times d}$, scale $s$, mask
+\State $m \gets -\infty^{B_q}$, $\ell \gets 0^{B_q}$, $o \gets 0^{B_q\times d}$
+\For{each key block $j$ (skipping blocks above the causal diagonal)}
+  \State $S \gets s\,Q_b K_j^\top$; set masked entries of $S$ to $-\infty$
+  \State $m' \gets \max(m, \operatorname{rowmax}(S))$
+  \State $P \gets \exp(S - m')$; \quad $c \gets \exp(m - m')$
+  \State $\ell \gets c\odot\ell + \operatorname{rowsum}(P)$; \quad $o \gets c\odot o + P V_j$
+  \State $m \gets m'$
+\EndFor
+\State \Return $o / \ell$
+\end{algorithmic}
+\end{algorithm}
+
+Both kernels are registered as attention backends of the Hugging Face model
+(\code{attn\_implementation="tiled"}), and our decoder can select them. Registering only the attention
+function is not enough: the library then passes \emph{no} attention mask to an unknown backend, so a
+left-padded batch silently attends to padding tokens (we measured logit errors up to 10.6). Registering
+the SDPA mask builder under the same name fixes this.
+
+\subsection{Greedy speculative decoding}
+\label{sec:spec}
+Algorithm~\ref{alg:spec} gives our greedy variant of speculative decoding~\cite{leviathan2023fast,chen2023accelerating}.
+Both models keep their own KV cache with the invariant that, between iterations, each cache holds
+every committed token except the last one, which is the pending input. In an iteration the draft first
+catches up on committed tokens it has not processed, then proposes $k$ tokens greedily. The target
+processes the last committed token and the $k$ drafts in \emph{one} forward pass; row $i$ of its
+logits is the target's greedy choice after drafts $1\ldots i$. The longest prefix of drafts matching
+the target's choices is accepted, and the target's own token at the first mismatch (or a bonus token
+if all match) is appended, so every iteration commits between 1 and $k{+}1$ tokens. Finally both
+caches are cropped to the committed length minus one, discarding the keys and values of rejected
+drafts. Because every committed token equals the target's argmax given the committed prefix, the
+output is identical to plain greedy decoding of the target.
+
+\begin{algorithm}[t]
+\caption{Greedy speculative decoding}
+\label{alg:spec}
+\begin{algorithmic}[1]
+\Require prompt $x$, target $M_t$, draft $M_d$, draft length $k$
+\State prefill $M_t$ on $x$; $y \gets x \,\|\, \arg\max M_t(x)$
+\While{budget left and last token $\neq$ EOS}
+  \State $M_d$: feed $y[\text{len}(C_d):]$, then draft $d_1..d_k$ greedily
+  \State $M_t$: one pass on $[y_{-1}, d_1..d_k]$ $\rightarrow$ choices $g_0..g_k$
+  \State $n \gets$ largest $n$ with $d_i = g_{i-1}\;\forall i\le n$
+  \State $y \gets y \,\|\, d_1..d_n \,\|\, g_n$ \Comment{truncate at EOS / budget}
+  \State crop $C_t$ and $C_d$ to $|y| - 1$
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Explanations, aggregation and application}
+\label{sec:app}
+The dataset contains no expert explanations, so the model is not trained to write free text.
+Instead, each prediction's explanation is assembled \emph{only} from the cited sentences (quoted with
+their IDs) and the meaning of the predicted label; a decisive label without cited evidence is flagged
+\emph{unsupported}, and \emph{not enough information} lists the criterion as missing information.
+This avoids hallucinated rationales at the cost of fluency. The overall patient--trial outcome is
+an explicit rule, not a learned or ground-truth label: \emph{likely ineligible} if any inclusion
+criterion is \emph{not included} or any exclusion criterion is \emph{excluded}; otherwise \emph{needs
+clinician review} if any criterion has insufficient information or could not be parsed; otherwise
+\emph{potentially eligible}.
+
+The application (Fig.~\ref{fig:overview}, bottom) is a FastAPI server with a React front end,
+packaged as a Docker image and started with one command. The user pastes a note (or loads a
+validation example), enters or pastes criteria or fetches them from ClinicalTrials.gov by NCT ID,
+chooses a decoding mode and runs the screening. Results stream back criterion by criterion with the
+label, evidence sentences highlighted in the numbered note, explanation, flags and timing. Reports are
+saved with provenance (model, adapter, decoding settings, time) and can be downloaded as HTML or JSON.
+A benchmark page runs a chosen prompt live through the uncached, cached, tiled-attention and
+speculative decoders and shows timings, token equality and draft acceptance, and an experiments page
+renders training curves, confusion matrices and GPU benchmarks from the logged result files.

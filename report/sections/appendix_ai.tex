@@ -1,0 +1,12 @@
+\section{Use of AI Assistance}
+\label{app:ai}
+An AI coding assistant (Anthropic's Claude, used through Claude Code) was used throughout this
+project: to draft and refactor source code (data pipeline, training and evaluation scripts, the
+decoder, attention and speculative-decoding implementations, the FastAPI backend and React
+front end, Docker configuration), to write tests and benchmark scripts, to drive the Kaggle jobs, and
+to draft this report. All numbers in the report come from logged runs in the repository
+(\code{results/}); none were produced or edited by the assistant without a corresponding run.
+Reused library code (PyTorch, Transformers, PEFT, scikit-learn, FastAPI, React, Recharts) is used
+through public APIs; our own implementations of KV-cached decoding, tiled attention and speculative
+decoding are verified by the automated tests described in Section~\ref{sec:results}. The author
+reviewed, executed and is responsible for the complete submission.

@@ -1,0 +1,46 @@
+\section{Related Work}
+\label{sec:related}
+
+\textbf{Patient--trial matching.} Koopman and Zuccon~\cite{koopman2016test} released the SIGIR 2016
+collection of patient case descriptions and candidate trials that underlies the patients in our
+dataset; it framed matching as retrieval with graded relevance. TrialGPT~\cite{jin2024trialgpt}
+recast the problem as LLM reasoning: GPT-4 first retrieves candidate trials, then judges each
+criterion with an explanation and cited patient sentences, and finally aggregates criterion
+judgements into a trial-level score. Its criterion-level annotations, in which clinicians labelled
+the eligibility of 1,015 patient--criterion pairs and marked the relevant sentences, are the
+benchmark used here. TrialGPT's predictions are produced by a proprietary model; we use only the
+expert annotations and treat the stored GPT-4 outputs as forbidden inputs. Unlike TrialGPT, which
+relies on prompting, we \emph{fine-tune} a model two to three orders of magnitude smaller, trading
+general reasoning ability for local execution and task-specific supervision.
+
+\textbf{Transformer decoders.} Our models follow the decoder-only Transformer~\cite{vaswani2017attention}
+as refined in Qwen2.5~\cite{qwen2024qwen25}: rotary position embeddings (RoPE)~\cite{su2024roformer},
+RMSNorm~\cite{zhang2019rmsnorm}, SwiGLU feed-forward blocks~\cite{shazeer2020glu} and grouped-query
+attention (GQA)~\cite{ainslie2023gqa}, which shares each key/value head among several query heads and
+shrinks the KV cache proportionally. Llama~3.2~\cite{grattafiori2024llama3} uses the same ingredients
+and was our main alternative (Section~\ref{sec:model}).
+
+\textbf{Parameter-efficient adaptation.} LoRA~\cite{hu2022lora} freezes the pretrained weights and
+learns a low-rank update $\Delta W = BA$ per adapted matrix, which reduces optimizer state by orders
+of magnitude and yields small, separately distributable adapters. QLoRA~\cite{dettmers2023qlora}
+additionally quantizes the frozen base to 4 bits; with a 1.5B model the base fits comfortably on a
+16\,GB GPU in half precision, so we did not need the quantization and its numerical side effects.
+
+\textbf{Efficient inference.} Autoregressive decoding is memory-bound: each new token needs the
+keys and values of all previous tokens. Caching them (the KV cache) turns quadratic recomputation into
+linear work; Pope et~al.~\cite{pope2023efficiently} analyse its memory/latency trade-offs, and
+PagedAttention~\cite{kwon2023pagedattention} manages it in fixed-size blocks for high-throughput
+serving. For attention itself, Milakov and Gimelshein~\cite{milakov2018online} showed that softmax can
+be computed in one pass with a running maximum and normalizer; Rabe and Staats~\cite{rabe2021selfattention}
+used this to compute attention in $O(\sqrt{n})$ or constant extra memory, and
+FlashAttention~\cite{dao2022flashattention} fused the tiled computation into an IO-aware GPU kernel
+that never materializes the $n\times n$ score matrix. Speculative decoding~\cite{leviathan2023fast,chen2023accelerating}
+lets a small draft model propose several tokens that the target verifies in one forward pass; with
+greedy acceptance the output is exactly the target's greedy output, so speed is the only thing at
+stake.
+
+\textbf{Limitations of prior approaches for our setting.} Prompted GPT-4 is accurate but not locally
+executable; retrieval-style matchers do not produce criterion-level labels or evidence; and
+production inference engines (vLLM, FlashAttention kernels) are CUDA-specific and opaque, whereas this
+work requires inspectable implementations that also run on a CPU-only laptop. We therefore combine a
+small fine-tuned model with educational, verified implementations of the inference techniques above.

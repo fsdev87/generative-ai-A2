@@ -38,3 +38,13 @@ kaggle_runs/*/output/
 # App runtime data
 reports/
 frontend/*.tsbuildinfo
+
+# LaTeX build files
+report/*.aux
+report/*.log
+report/*.out
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
