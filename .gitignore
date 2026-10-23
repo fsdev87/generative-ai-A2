@@ -37,3 +37,4 @@ kaggle_runs/*/output/
 
 # App runtime data
 reports/
+frontend/*.tsbuildinfo
