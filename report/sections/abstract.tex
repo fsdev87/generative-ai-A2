@@ -1,0 +1,16 @@
+Screening patients against free-text clinical-trial eligibility criteria is slow manual work.
+We fine-tune the open-weight Qwen2.5-1.5B-Instruct with LoRA on the expert annotations of the
+TrialGPT Criterion Annotations dataset to judge one inclusion or exclusion criterion at a time,
+returning one of the dataset's four labels per criterion type and the IDs of the supporting patient
+sentences. On a patient-disjoint held-out test split, fine-tuning raises accuracy from 0.039 to
+0.748, macro-F1 from 0.077 to 0.569 and evidence micro-F1 from 0.095 to 0.513; seed repeats and a
+paired bootstrap quantify the variability behind these numbers, and an error analysis shows that
+the largest error group stems from inconsistently annotated missing information. We further
+implement and verify the inference stack from first principles: a hand-written Qwen2 forward pass
+with an explicit pre-allocated KV cache (token-identical to recomputation in fp32, up to
+13$\times$ faster on a T4), tiled attention with online softmax (matching exact attention to float
+precision with 2.3\,GB less memory at 4,096 tokens, but slower than fused kernels), and greedy
+speculative decoding with a fine-tuned 0.5B draft (exact outputs, 93\% acceptance, no speed-up,
+which a measured draft/target cost ratio of 0.84 explains). A Dockerized React/FastAPI application
+exposes evidence-linked screening, explicit outcome aggregation, report export and live inference
+benchmarks on a CPU-only laptop.

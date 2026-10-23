@@ -7,7 +7,7 @@ Transformers~5.20 and PEFT~0.21. Each job clones the repository at a recorded co
 exits so the GPU is released immediately; a short preflight on the longest examples precedes every
 training run so that environment or memory errors cost seconds rather than minutes. The application
 and the CPU measurements ran on a laptop with an Intel Core i5-1135G7 (4 cores) and 16\,GB RAM,
-PyTorch~2.14 (CPU) in fp32. In total all GPU experiments used \TBD{} of the free 30-hour weekly quota.
+PyTorch~2.14 (CPU) in fp32. In total all GPU experiments, including failed attempts, used 3.2 of the free 30 weekly GPU hours.
 
 \textbf{Decoding settings.} All reported predictions use greedy decoding (argmax), at most 64 new
 tokens, batch size 16 for evaluation, and \code{repetition\_penalty}$=1.0$. The latter matters:

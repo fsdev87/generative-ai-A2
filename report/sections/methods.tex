@@ -19,7 +19,7 @@
 \node[proc, left=of dec] (attn) {attention backend:\\SDPA / reference /\\tiled online-softmax};
 \node[proc, right=of dec] (spec) {greedy speculative\\decoding (0.5B draft)\\cache rollback};
 \node[proc, right=of spec] (post) {parse JSON, verify IDs,\\evidence-only explanation,\\rule aggregation};
-\node[ui, left=of attn] (ui) {React UI\\FastAPI server\\(Docker)};
+\node[ui, left=12mm of attn] (ui) {React UI\\FastAPI server\\(Docker)};
 \draw[arr] (ds) -- (split);
 \draw[arr] (split) -- (prompt);
 \draw[arr] (prompt) -- (lora);
@@ -28,7 +28,7 @@
 \draw[arr] (attn) -- (dec);
 \draw[arr] (dec) -- (spec);
 \draw[arr] (spec) -- (post);
-\draw[arr] (ui) -- node[above, font=\tiny]{note, criteria} (attn);
+\draw[arr] (ui) -- node[above, font=\tiny, align=center]{note,\\criteria} (attn);
 \draw[arr] (post.south) -- ++(0,-4mm) -| node[pos=0.25, below, font=\tiny]{streamed results, report, benchmarks} (ui.south);
 \end{tikzpicture}
 \caption{System overview. Top: data preparation and supervised adaptation. Bottom: the inference

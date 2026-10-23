@@ -4,6 +4,7 @@ const RULES = [
   "Likely ineligible: any inclusion criterion is 'not included' or any exclusion criterion is 'excluded'.",
   "Needs clinician review: otherwise, if any criterion is 'not enough information' or could not be parsed.",
   "Potentially eligible: otherwise (every criterion is satisfied or 'not applicable').",
+  "'Not excluded' judgements that cite no sentence are flagged 'inferred from absence' and listed for verification; they do not block the outcome.",
   "The verdict is a rule-based aggregation of criterion-level predictions, not a ground-truth label.",
 ];
 

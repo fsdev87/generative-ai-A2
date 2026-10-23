@@ -19,6 +19,8 @@ AGGREGATION_RULES = [
     "Likely ineligible: any inclusion criterion is 'not included' or any exclusion criterion is 'excluded'.",
     "Needs clinician review: otherwise, if any criterion is 'not enough information' or could not be parsed.",
     "Potentially eligible: otherwise (every criterion is satisfied or 'not applicable').",
+    "'Not excluded' judgements that cite no sentence are flagged 'inferred from absence' and listed "
+    "for verification; they do not block the outcome.",
     "This verdict is a rule-based aggregation of criterion-level predictions, not a ground-truth label.",
 ]
 
@@ -32,7 +34,15 @@ def explain(ctype, ctext, label, evidence, parse_ok):
         flags.append("recovered_from_malformed_output")
 
     cited = " ".join(f"[{e['id']}] \"{e['text']}\"" for e in evidence)
-    if label in _DECISIVE:
+    if label == "not excluded" and not evidence:
+        # The dataset's experts often label an unmentioned exclusion condition "not excluded"
+        # (365 of 483 such labels cite no sentence), and the model learned that convention.
+        # Absence of a mention is not proof, so this is surfaced as a distinct warning.
+        text = ("No sentence of the note mentions the excluding condition; the model judged the "
+                "patient not excluded on that basis. This is inferred from absence of information "
+                "and should be verified.")
+        flags.append("inferred_from_absence")
+    elif label in _DECISIVE:
         if evidence:
             text = f"Based on {cited}, {_MEANING[(ctype, label)]}."
         else:
@@ -57,6 +67,7 @@ def aggregate(results):
     blocking = [i for i, (t, l) in enumerate(labels)
                 if (t, l) in {("inclusion", "not included"), ("exclusion", "excluded")}]
     unresolved = [i for i, (_, l) in enumerate(labels) if l in (None, "not enough information")]
+    absence_based = [i for i, r in enumerate(results) if "inferred_from_absence" in r.get("flags", [])]
     if blocking:
         verdict = "likely ineligible"
     elif unresolved:
@@ -68,7 +79,7 @@ def aggregate(results):
         counts.setdefault(t, {}).setdefault(l or "unparseable", 0)
         counts[t][l or "unparseable"] += 1
     return {"verdict": verdict, "blocking_criteria": blocking, "unresolved_criteria": unresolved,
-            "counts": counts, "rules": AGGREGATION_RULES}
+            "absence_based_criteria": absence_based, "counts": counts, "rules": AGGREGATION_RULES}
 
 
 def render_html(report):

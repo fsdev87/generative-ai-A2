@@ -1,0 +1,44 @@
+{
+  "prompt_tokens": 294,
+  "n_new": 128,
+  "precision": {
+    "float16": {
+      "diverged_at_step": null,
+      "steps_compared": 128,
+      "max_abs_logit_diff_before_divergence": 0.19921875,
+      "min_margin_before_divergence": 0.0
+    },
+    "float32": {
+      "diverged_at_step": null,
+      "steps_compared": 128,
+      "max_abs_logit_diff_before_divergence": 0.0003075599670410156,
+      "min_margin_before_divergence": 0.00283050537109375
+    }
+  },
+  "decode_step_cost": {
+    "300": {
+      "target_ms": 28.549,
+      "draft_ms": 23.553,
+      "c": 0.825
+    },
+    "1000": {
+      "target_ms": 28.137,
+      "draft_ms": 23.774,
+      "c": 0.845
+    },
+    "2000": {
+      "target_ms": 28.55,
+      "draft_ms": 23.94,
+      "c": 0.839
+    }
+  },
+  "predicted_speedup": {
+    "a=0.75,k=2": 0.865,
+    "a=0.75,k=4": 0.702,
+    "a=0.75,k=8": 0.481,
+    "a=0.93,k=2": 1.046,
+    "a=0.93,k=4": 1.0,
+    "a=0.93,k=8": 0.891
+  },
+  "c_mean": 0.836
+}

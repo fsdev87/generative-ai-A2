@@ -274,6 +274,8 @@ function Verdict({ aggregate, running, done, total }: { aggregate: Aggregate | n
         Rule-based aggregation of criterion predictions (not a ground-truth label):
         {aggregate.blocking_criteria.length > 0 && ` ${aggregate.blocking_criteria.length} blocking criterion(s);`}
         {aggregate.unresolved_criteria.length > 0 && ` ${aggregate.unresolved_criteria.length} need(s) more information;`}
+        {(aggregate.absence_based_criteria?.length ?? 0) > 0 &&
+          ` ${aggregate.absence_based_criteria!.length} 'not excluded' judgement(s) inferred only from absence — verify;`}
         {" "}see About for the exact rules.
       </div>
     </div>

@@ -1,0 +1,35 @@
+\section{Limitations}
+\label{sec:limitations}
+
+\textbf{Data size and label noise.} The benchmark has 53 patients; the test split holds 206
+criteria from 8 patients, no \emph{excluded} example, and only 3--7 examples of several other
+classes, so per-class test figures have wide uncertainty and the test set is dominated by a few
+patients and trials (one patient contributes 14 of the 25 largest-group errors). The error analysis
+shows that annotators applied the \emph{not excluded} versus \emph{not enough information}
+distinction inconsistently for conditions the note does not mention; part of the measured error
+reflects this ambiguity rather than model failure, and conversely the model has learned a convention
+(absence $\Rightarrow$ not excluded) that a screening tool should not apply blindly.
+
+\textbf{Model capacity and reasoning.} A 1.5B model does not perform the clinical inferences and
+counting that some criteria require (Table~\ref{tab:errors}), and it essentially never predicts the
+rarest classes. Explanations are assembled from cited sentences rather than generated, which avoids
+hallucinated rationales but cannot express the reasoning linking evidence to label. The model judges
+each criterion independently and ignores compound logic across criteria.
+
+\textbf{Selection and evaluation.} Model selection used a validation set too small to separate the
+variants statistically; the chosen configuration's advantage is not significant, although seed
+repeats show it is stable. We evaluated a single dataset; generalization to real clinical notes,
+which are longer, noisier and not pre-split into sentences, is untested. The application's sentence
+splitter for unseen notes is rule-based and may split or merge sentences differently from the
+dataset's annotation.
+
+\textbf{Inference implementations.} Our decoders run at batch size 1 and do not implement paged or
+quantized caches. The tiled attention is an educational Python implementation that saves memory but
+is much slower than fused kernels. Speculative decoding gives no speed-up in our setting because the
+draft is not cheap enough relative to the target at batch size 1; we did not evaluate larger target
+models, where it would be expected to help. Timings were measured on one T4 and one laptop CPU and
+include Kaggle's shared-infrastructure variability.
+
+\textbf{Clinical use.} The system is an educational screening prototype. It has not been validated
+clinically, is not a medical device, and must not be used for enrollment decisions; every result
+requires review by qualified staff.

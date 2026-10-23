@@ -52,6 +52,7 @@ export interface Aggregate {
   verdict: string;
   blocking_criteria: number[];
   unresolved_criteria: number[];
+  absence_based_criteria?: number[];
   counts: Record<string, Record<string, number>>;
   rules: string[];
 }

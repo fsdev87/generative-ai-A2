@@ -11,6 +11,7 @@ services:
       ANSWER_ORDER: ${ANSWER_ORDER:-label_first}
       TARGET_MODEL: ${TARGET_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
       DRAFT_MODEL: ${DRAFT_MODEL:-Qwen/Qwen2.5-0.5B-Instruct}
+      DRAFT_ADAPTER: ${DRAFT_ADAPTER-farazmust123/qwen2.5-0.5b-trialgpt-draft-lora}
       DTYPE: ${DTYPE:-float32}
       MAX_NEW_TOKENS: ${MAX_NEW_TOKENS:-64}
       SPEC_K: ${SPEC_K:-4}

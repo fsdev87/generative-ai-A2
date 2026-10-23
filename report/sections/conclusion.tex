@@ -1,0 +1,21 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+A 1.5B open-weight decoder, adapted with LoRA on 602 expert-labelled criteria in under 14 minutes of
+free GPU time, judges individual trial eligibility criteria with held-out accuracy 0.748, macro-F1
+0.569 and evidence micro-F1 0.513, up from near-zero for the untuned model under the same prompt,
+and its published adapter reproduces exactly on a CPU-only laptop. The model is reliable on the
+frequent classes but defers to \emph{not enough information} where experts draw clinical
+inferences, never predicts the rarest classes, and has inherited the annotators' inconsistent
+treatment of unmentioned exclusion conditions; the application therefore surfaces such absence-based
+judgements for verification instead of presenting them as facts.
+
+On the inference side, our explicit KV cache is token-identical to recomputation in fp32 and raises
+throughput up to 13$\times$ at long prompts; the only fp16 disagreements trace back to exact
+top-2 ties under different kernels. Tiled online-softmax attention matches exact attention to float
+precision while cutting attention memory from 2.3\,GB to 17\,MB at 4,096 tokens, but is slower than
+fused kernels when written in Python. Greedy speculative decoding is exactly output-preserving and a
+fine-tuned draft reaches 93\% acceptance, yet the measured draft/target cost ratio of 0.84 at batch
+size 1 predicts and explains the absence of a speed-up. Future work includes larger targets with the
+same draft, consistency-aware training labels for missing information, generated but evidence-checked
+explanations, and evaluation on real clinical notes.

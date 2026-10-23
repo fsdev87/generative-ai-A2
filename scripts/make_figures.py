@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import matplotlib
+import matplotlib.ticker
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -98,6 +99,7 @@ def attention():
     for ax, ylabel in [(a, "median time (ms)"), (b, "peak extra memory (MB)")]:
         ax.set(xlabel="sequence length", ylabel=ylabel, xscale="log", yscale="log")
         ax.set_xticks([128, 256, 512, 1024, 2048, 4096], ["128", "256", "512", "1k", "2k", "4k"])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     a.legend(frameon=False)
     save(fig, "attention_perf")
 
@@ -121,6 +123,10 @@ def kv_cache():
                    marker + "--", color="#c2410c", ms=3, lw=1, label=f"uncached, {n_new} new")
     a.set(xlabel="prompt tokens", ylabel="end-to-end time (s)", xscale="log", yscale="log")
     b.set(xlabel="prompt tokens", ylabel="peak GPU memory (MB)", xscale="log")
+    for ax in (a, b):
+        ticks = [e["prompt_tokens"] for e in data["lengths"] if e["new_tokens"] == 16]
+        ax.set_xticks(ticks, [str(t) for t in ticks])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     a.legend(frameon=False, fontsize=6, ncol=2)
     save(fig, "kv_cache")
 
