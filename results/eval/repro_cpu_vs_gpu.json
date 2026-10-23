@@ -1,0 +1,9 @@
+{
+  "n": 40,
+  "identical_raw": 40,
+  "same_label": 40,
+  "same_evidence": 40,
+  "correct_cpu_fp32": 28,
+  "correct_gpu_fp16": 28,
+  "setup": "published HF adapter, CPU fp32 (i5-1135G7) vs Kaggle T4 fp16 predictions, first 40 val annotations, greedy"
+}
