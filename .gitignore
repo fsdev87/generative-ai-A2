@@ -1,0 +1,30 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Large artifacts (weights are hosted on Hugging Face, not in git)
+checkpoints/
+*.safetensors
+*.bin
+hf_cache/
+
+# Raw dataset cache (re-downloaded by scripts/prepare_data.py)
+data/raw/
+
+# Kaggle run downloads
+kaggle_runs/*/output/
+
+# Secrets
+.env
+access_token
+kaggle.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
