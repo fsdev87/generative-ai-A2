@@ -1,0 +1,313 @@
+{
+  "overall": {
+    "classification": {
+      "n": 206,
+      "accuracy": 0.0146,
+      "macro_f1": 0.009,
+      "invalid_predictions": 0,
+      "per_class": {
+        "excluded": {
+          "precision": 0.0143,
+          "recall": 1.0,
+          "f1": 0.0282,
+          "support": 2
+        },
+        "included": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 35
+        },
+        "not applicable": {
+          "precision": 0.0152,
+          "recall": 0.0833,
+          "f1": 0.0256,
+          "support": 12
+        },
+        "not enough information": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 53
+        },
+        "not excluded": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 101
+        },
+        "not included": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 3
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "excluded",
+          "included",
+          "not applicable",
+          "not enough information",
+          "not excluded",
+          "not included"
+        ],
+        "matrix": [
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            35,
+            0,
+            0,
+            0
+          ],
+          [
+            11,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            26,
+            0,
+            27,
+            0,
+            0,
+            0
+          ],
+          [
+            101,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    "evidence": {
+      "micro": {
+        "precision": 0.0427,
+        "recall": 0.313,
+        "f1": 0.0752
+      },
+      "macro_nonempty_gold": {
+        "precision": 0.0847,
+        "recall": 0.3472,
+        "f1": 0.1195,
+        "n": 90
+      },
+      "empty_gold": {
+        "n": 116,
+        "agreement": 0.1379
+      }
+    }
+  },
+  "inclusion": {
+    "classification": {
+      "n": 66,
+      "accuracy": 0.0152,
+      "macro_f1": 0.0075,
+      "invalid_predictions": 0,
+      "per_class": {
+        "included": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 35
+        },
+        "not applicable": {
+          "precision": 0.0152,
+          "recall": 1.0,
+          "f1": 0.0299,
+          "support": 1
+        },
+        "not enough information": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 27
+        },
+        "not included": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 3
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "included",
+          "not applicable",
+          "not enough information",
+          "not included"
+        ],
+        "matrix": [
+          [
+            0,
+            35,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            27,
+            0,
+            0
+          ],
+          [
+            0,
+            3,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    "evidence": {
+      "micro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "macro_nonempty_gold": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "n": 50
+      },
+      "empty_gold": {
+        "n": 16,
+        "agreement": 1.0
+      }
+    }
+  },
+  "exclusion": {
+    "classification": {
+      "n": 140,
+      "accuracy": 0.0143,
+      "macro_f1": 0.007,
+      "invalid_predictions": 0,
+      "per_class": {
+        "excluded": {
+          "precision": 0.0143,
+          "recall": 1.0,
+          "f1": 0.0282,
+          "support": 2
+        },
+        "not applicable": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 11
+        },
+        "not enough information": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 26
+        },
+        "not excluded": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 101
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "excluded",
+          "not applicable",
+          "not enough information",
+          "not excluded"
+        ],
+        "matrix": [
+          [
+            2,
+            0,
+            0,
+            0
+          ],
+          [
+            11,
+            0,
+            0,
+            0
+          ],
+          [
+            26,
+            0,
+            0,
+            0
+          ],
+          [
+            101,
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    "evidence": {
+      "micro": {
+        "precision": 0.0427,
+        "recall": 0.75,
+        "f1": 0.0808
+      },
+      "macro_nonempty_gold": {
+        "precision": 0.1905,
+        "recall": 0.7812,
+        "f1": 0.2688,
+        "n": 40
+      },
+      "empty_gold": {
+        "n": 100,
+        "agreement": 0.0
+      }
+    }
+  },
+  "parse_ok_rate": 1.0,
+  "settings": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "adapter": null,
+    "split": "val",
+    "n": 206,
+    "answer_order": "label_first",
+    "decoding": {
+      "strategy": "greedy",
+      "do_sample": false,
+      "repetition_penalty": 1.0,
+      "max_new_tokens": 64,
+      "batch_size": 16
+    },
+    "device": "cuda:0",
+    "dtype": "torch.float16",
+    "seconds": 33.1
+  }
+}

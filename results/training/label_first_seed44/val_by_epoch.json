@@ -1,0 +1,29 @@
+[
+  {
+    "epoch": 1,
+    "step": 76,
+    "val_loss": 0.13286,
+    "accuracy": 0.7282,
+    "macro_f1": 0.3808,
+    "evidence_micro_f1": 0.4552,
+    "parse_ok_rate": 1.0
+  },
+  {
+    "epoch": 2,
+    "step": 152,
+    "val_loss": 0.12789,
+    "accuracy": 0.7573,
+    "macro_f1": 0.5585,
+    "evidence_micro_f1": 0.5342,
+    "parse_ok_rate": 1.0
+  },
+  {
+    "epoch": 3,
+    "step": 228,
+    "val_loss": 0.14645,
+    "accuracy": 0.7573,
+    "macro_f1": 0.5598,
+    "evidence_micro_f1": 0.5176,
+    "parse_ok_rate": 1.0
+  }
+]

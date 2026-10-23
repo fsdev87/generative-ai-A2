@@ -1,0 +1,297 @@
+{
+  "overall": {
+    "classification": {
+      "n": 206,
+      "accuracy": 0.7573,
+      "macro_f1": 0.5598,
+      "invalid_predictions": 0,
+      "per_class": {
+        "excluded": {
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6667,
+          "support": 2
+        },
+        "included": {
+          "precision": 0.8571,
+          "recall": 0.6857,
+          "f1": 0.7619,
+          "support": 35
+        },
+        "not applicable": {
+          "precision": 0.5,
+          "recall": 0.4167,
+          "f1": 0.4545,
+          "support": 12
+        },
+        "not enough information": {
+          "precision": 0.6327,
+          "recall": 0.5849,
+          "f1": 0.6078,
+          "support": 53
+        },
+        "not excluded": {
+          "precision": 0.8051,
+          "recall": 0.9406,
+          "f1": 0.8676,
+          "support": 101
+        },
+        "not included": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 3
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "excluded",
+          "included",
+          "not applicable",
+          "not enough information",
+          "not excluded",
+          "not included"
+        ],
+        "matrix": [
+          [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            24,
+            0,
+            11,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            5,
+            1,
+            6,
+            0
+          ],
+          [
+            0,
+            3,
+            3,
+            31,
+            16,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            4,
+            95,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            2,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    "evidence": {
+      "micro": {
+        "precision": 0.4714,
+        "recall": 0.5739,
+        "f1": 0.5176
+      },
+      "macro_nonempty_gold": {
+        "precision": 0.546,
+        "recall": 0.6046,
+        "f1": 0.5564,
+        "n": 90
+      },
+      "empty_gold": {
+        "n": 116,
+        "agreement": 0.8534
+      }
+    }
+  },
+  "inclusion": {
+    "classification": {
+      "n": 66,
+      "accuracy": 0.7273,
+      "macro_f1": 0.3751,
+      "invalid_predictions": 0,
+      "per_class": {
+        "included": {
+          "precision": 0.8571,
+          "recall": 0.6857,
+          "f1": 0.7619,
+          "support": 35
+        },
+        "not applicable": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "not enough information": {
+          "precision": 0.6316,
+          "recall": 0.8889,
+          "f1": 0.7385,
+          "support": 27
+        },
+        "not included": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 3
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "included",
+          "not applicable",
+          "not enough information",
+          "not included"
+        ],
+        "matrix": [
+          [
+            24,
+            0,
+            11,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            3,
+            0,
+            24,
+            0
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "evidence": {
+      "micro": {
+        "precision": 0.5217,
+        "recall": 0.7164,
+        "f1": 0.6038
+      },
+      "macro_nonempty_gold": {
+        "precision": 0.6729,
+        "recall": 0.7783,
+        "f1": 0.6949,
+        "n": 50
+      },
+      "empty_gold": {
+        "n": 16,
+        "agreement": 0.5625
+      }
+    }
+  },
+  "exclusion": {
+    "classification": {
+      "n": 140,
+      "accuracy": 0.7714,
+      "macro_f1": 0.5972,
+      "invalid_predictions": 0,
+      "per_class": {
+        "excluded": {
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6667,
+          "support": 2
+        },
+        "not applicable": {
+          "precision": 0.5,
+          "recall": 0.4545,
+          "f1": 0.4762,
+          "support": 11
+        },
+        "not enough information": {
+          "precision": 0.6364,
+          "recall": 0.2692,
+          "f1": 0.3784,
+          "support": 26
+        },
+        "not excluded": {
+          "precision": 0.8051,
+          "recall": 0.9406,
+          "f1": 0.8676,
+          "support": 101
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "excluded",
+          "not applicable",
+          "not enough information",
+          "not excluded"
+        ],
+        "matrix": [
+          [
+            1,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            5,
+            0,
+            6
+          ],
+          [
+            0,
+            3,
+            7,
+            16
+          ],
+          [
+            0,
+            2,
+            4,
+            95
+          ]
+        ]
+      }
+    },
+    "evidence": {
+      "micro": {
+        "precision": 0.375,
+        "recall": 0.375,
+        "f1": 0.375
+      },
+      "macro_nonempty_gold": {
+        "precision": 0.3875,
+        "recall": 0.3875,
+        "f1": 0.3833,
+        "n": 40
+      },
+      "empty_gold": {
+        "n": 100,
+        "agreement": 0.9
+      }
+    }
+  },
+  "parse_ok_rate": 1.0,
+  "epoch": 3
+}
