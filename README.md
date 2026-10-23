@@ -21,21 +21,17 @@ Open <http://localhost:8000>. On first start the base model (~3 GB) and the LoRA
 downloaded into a Docker volume and loaded in the background; the status badge (top right) turns
 green when ready. Stop with `docker compose down`.
 
-The adapter is selected with the `ADAPTER` environment variable (Hugging Face repo id or a path
-inside the container), e.g. in a `.env` file next to `docker-compose.yml`:
-
-```
-ADAPTER=<hf-user>/qwen2.5-1.5b-trialgpt-lora
-```
-
-Without `ADAPTER` the app runs the untuned base model (useful for before/after comparison).
+By default the app downloads the fine-tuned LoRA adapter from Hugging Face:
+**[farazmust123/qwen2.5-1.5b-trialgpt-lora](https://huggingface.co/farazmust123/qwen2.5-1.5b-trialgpt-lora)**.
+To run the untuned base model instead (before/after comparison), put `ADAPTER=` in a `.env` file
+next to `docker-compose.yml`.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ADAPTER` | *(none)* | LoRA adapter (HF repo id or path) merged into the target model |
+| `ADAPTER` | `farazmust123/qwen2.5-1.5b-trialgpt-lora` | LoRA adapter (HF repo id or path) merged into the target model |
 | `TARGET_MODEL` | `Qwen/Qwen2.5-1.5B-Instruct` | target model |
 | `DRAFT_MODEL` / `DRAFT_ADAPTER` | `Qwen/Qwen2.5-0.5B-Instruct` / none | draft model for speculative decoding |
-| `ANSWER_ORDER` | `evidence_first` | output schema the adapter was trained with |
+| `ANSWER_ORDER` | `label_first` | output schema the adapter was trained with |
 | `DTYPE` | `float32` | model dtype on CPU |
 | `MAX_NEW_TOKENS`, `SPEC_K` | `64`, `4` | generation budget, speculative draft length |
 
