@@ -163,10 +163,12 @@ def main():
     print(f"trainable params: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)", flush=True)
 
     train_examples = [encode(tok, r, args.max_length) for r in train_records]
+    # Teacher-forced validation loss materializes full-vocabulary logits like training
+    # does, so it uses the training batch size, not the larger generation batch size.
     val_batches = [
-        collate([encode(tok, r, args.max_length) for r in val_records[i:i + args.eval_batch_size]],
+        collate([encode(tok, r, args.max_length) for r in val_records[i:i + args.batch_size]],
                 tok.pad_token_id)
-        for i in range(0, len(val_records), args.eval_batch_size)
+        for i in range(0, len(val_records), args.batch_size)
     ]
 
     steps_per_epoch = math.ceil(len(train_examples) / (args.batch_size * args.grad_accum))
@@ -216,6 +218,9 @@ def main():
                     print(f"epoch {epoch} step {step}/{total_steps} loss {running:.4f}", flush=True)
                 running = 0.0
 
+        model.save_pretrained(out / f"epoch_{epoch}")  # saved first so a later failure cannot lose it
+        (out / "history.json").write_text(json.dumps(history, indent=1))
+
         val_loss = validation_loss(model, val_batches, device, amp_dtype)
         model.eval()
         preds, report = evaluate(model, tok, val_records, batch_size=args.eval_batch_size)
@@ -223,7 +228,6 @@ def main():
         val_by_epoch.append(summary)
         print("validation:", summary, flush=True)
 
-        model.save_pretrained(out / f"epoch_{epoch}")
         if summary["macro_f1"] > best_f1:
             best_f1 = summary["macro_f1"]
             shutil.rmtree(out / "best", ignore_errors=True)

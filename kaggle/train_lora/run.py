@@ -28,8 +28,10 @@ try:
     # Preflight on the 4 longest examples: environment errors and peak-memory OOMs
     # fail in seconds instead of after the baseline.
     env = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+    # Same batch sizes as the real run so every memory peak (train step, val loss,
+    # batched generation) is exercised.
     sh(f"cd repo && {env} python scripts/train_lora.py --out /tmp/preflight --epochs 1 "
-       "--limit-train 4 --longest-first --limit-val 4 --eval-batch-size 4")
+       "--limit-train 8 --longest-first --limit-val 16")
     sh(f"cd repo && {env} python scripts/train_lora.py --out /kaggle/working/lora_r16 --baseline")
 finally:
     sh("rm -rf repo")  # keep the downloadable output small

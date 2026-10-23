@@ -33,8 +33,9 @@ def ids_of(tok, text):
 
 
 def hf_greedy(model, ids, n):
-    # repetition_penalty=1.0 overrides the 1.1 in Qwen's generation_config.json.
-    out = model.generate(ids, max_new_tokens=n, min_new_tokens=n, do_sample=False,
+    # repetition_penalty=1.0 overrides the 1.1 in Qwen's generation_config.json;
+    # eos_token_id=None generates exactly n tokens, like our decoders without eos_ids.
+    out = model.generate(ids, max_new_tokens=n, do_sample=False, eos_token_id=None,
                          temperature=None, top_p=None, top_k=None, repetition_penalty=1.0)
     return out[0, ids.shape[1]:].tolist()
 
