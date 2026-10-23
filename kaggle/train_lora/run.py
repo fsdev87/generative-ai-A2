@@ -25,9 +25,11 @@ try:
     sh("pip install -q transformers==5.20.2 peft==0.21.2 && pip install -q --no-deps -e repo")
     sh("python -c \"import torch, transformers, peft; "
        "print('torch', torch.__version__, 'transformers', transformers.__version__, 'peft', peft.__version__)\"")
-    # Preflight: a few steps on 4 examples so environment errors fail in seconds, not after the baseline.
-    sh("cd repo && python scripts/train_lora.py --out /tmp/preflight --epochs 1 "
-       "--limit-train 4 --limit-val 4 --eval-batch-size 4")
-    sh("cd repo && python scripts/train_lora.py --out /kaggle/working/lora_r16 --baseline")
+    # Preflight on the 4 longest examples: environment errors and peak-memory OOMs
+    # fail in seconds instead of after the baseline.
+    env = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+    sh(f"cd repo && {env} python scripts/train_lora.py --out /tmp/preflight --epochs 1 "
+       "--limit-train 4 --longest-first --limit-val 4 --eval-batch-size 4")
+    sh(f"cd repo && {env} python scripts/train_lora.py --out /kaggle/working/lora_r16 --baseline")
 finally:
     sh("rm -rf repo")  # keep the downloadable output small

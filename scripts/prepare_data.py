@@ -111,10 +111,18 @@ def main():
     }
     checks = check_split(splits, records_by_split, records)
 
+    # Annotations without criterion text cannot be posed as a task; they stay assigned
+    # to their patient's split in the manifest but are left out of the processed files.
+    dropped = [{"annotation_id": r["annotation_id"], "patient_id": r["patient_id"],
+                "reason": "empty criterion_text"}
+               for r in records if not (r["criterion_text"] or "").strip()]
+    dropped_ids = {d["annotation_id"] for d in dropped}
+
     processed = ROOT / "data" / "processed"
     processed.mkdir(parents=True, exist_ok=True)
     for name, recs in records_by_split.items():
-        write_jsonl(processed / f"{name}.jsonl", recs)
+        records_by_split[name] = [r for r in recs if r["annotation_id"] not in dropped_ids]
+        write_jsonl(processed / f"{name}.jsonl", records_by_split[name])
 
     manifest = {
         "dataset": DATASET_ID,
@@ -123,6 +131,7 @@ def main():
         "seed": SPLIT_SEED,
         "excluded_columns": LEAKY_COLUMNS,
         "checks": checks,
+        "dropped_annotations": dropped,
         "splits": {
             name: {"patients": len(ids), "patient_ids": ids, **summarize(records_by_split[name])}
             for name, ids in splits.items()

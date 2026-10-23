@@ -14,6 +14,13 @@
     "annotations_assigned_once": true,
     "leaky_fields_in_records": "none"
   },
+  "dropped_annotations": [
+    {
+      "annotation_id": 883,
+      "patient_id": "sigir-201519",
+      "reason": "empty criterion_text"
+    }
+  ],
   "splits": {
     "train": {
       "patients": 37,
@@ -56,15 +63,15 @@
         "sigir-201520",
         "sigir-20153"
       ],
-      "annotations": 603,
+      "annotations": 602,
       "with_evidence": 254,
-      "without_evidence": 349,
+      "without_evidence": 348,
       "labels": {
         "exclusion": {
           "excluded": 8,
           "not applicable": 23,
           "not enough information": 65,
-          "not excluded": 292
+          "not excluded": 291
         },
         "inclusion": {
           "included": 88,

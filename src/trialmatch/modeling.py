@@ -44,7 +44,11 @@ def prompt_text(tok, record):
 
 @torch.no_grad()
 def generate_batch(model, tok, prompts, max_new_tokens=64):
-    """Greedy generation for a batch of chat-formatted prompts; returns decoded continuations."""
+    """Greedy generation for a batch of chat-formatted prompts; returns decoded continuations.
+
+    Qwen's generation_config.json sets repetition_penalty=1.1, which HF applies even
+    with do_sample=False; it is reset to 1.0 so this is plain argmax decoding.
+    """
     enc = tok(prompts, return_tensors="pt", padding=True, add_special_tokens=False).to(model.device)
     out = model.generate(
         **enc,
@@ -53,6 +57,7 @@ def generate_batch(model, tok, prompts, max_new_tokens=64):
         temperature=None,
         top_p=None,
         top_k=None,
+        repetition_penalty=1.0,
         pad_token_id=tok.pad_token_id,
     )
     return tok.batch_decode(out[:, enc["input_ids"].shape[1]:], skip_special_tokens=True)

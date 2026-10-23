@@ -101,8 +101,11 @@ def main():
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
-    parser.add_argument("--batch-size", type=int, default=4)
-    parser.add_argument("--grad-accum", type=int, default=2)
+    # Effective batch 8. Batch 4 runs out of memory on a 15 GB T4: the fp32 logits
+    # alone are 4 x 651 x 151,936 x 4 B = 1.6 GB per copy.
+    parser.add_argument("--batch-size", type=int, default=2)
+    parser.add_argument("--grad-accum", type=int, default=4)
+    parser.add_argument("--no-gradient-checkpointing", action="store_true")
     parser.add_argument("--warmup-ratio", type=float, default=0.05)
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--max-length", type=int, default=768)
@@ -110,6 +113,8 @@ def main():
     parser.add_argument("--baseline", action="store_true", help="also evaluate the untuned model on val")
     parser.add_argument("--limit-train", type=int, default=None, help="smoke tests only")
     parser.add_argument("--limit-val", type=int, default=None, help="smoke tests only")
+    parser.add_argument("--longest-first", action="store_true",
+                        help="with --limit-train: take the longest examples (memory preflight)")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -119,7 +124,10 @@ def main():
     device = pick_device()
     amp_dtype = torch.float16 if device.type == "cuda" else None
 
-    train_records = read_jsonl(ROOT / "data" / "processed" / "train.jsonl")[: args.limit_train]
+    train_records = read_jsonl(ROOT / "data" / "processed" / "train.jsonl")
+    if args.longest_first:
+        train_records.sort(key=lambda r: -sum(len(t) for _, t in r["sentences"]) - len(r["criterion_text"]))
+    train_records = train_records[: args.limit_train]
     val_records = read_jsonl(ROOT / "data" / "processed" / "val.jsonl")[: args.limit_val]
 
     tok = load_tokenizer(args.model)
@@ -146,6 +154,10 @@ def main():
         r=args.lora_r, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,
         target_modules=LORA_TARGETS, task_type="CAUSAL_LM",
     ))
+    if not args.no_gradient_checkpointing:
+        # Recompute layer activations in the backward pass instead of storing them.
+        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+        model.enable_input_require_grads()
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
     print(f"trainable params: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)", flush=True)
