@@ -10,3 +10,7 @@ scikit-learn
 matplotlib
 kaggle==2.2.5
 huggingface_hub
+fastapi==0.161.1
+uvicorn[standard]==0.54.0
+pytest
+httpx

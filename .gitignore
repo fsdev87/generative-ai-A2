@@ -34,3 +34,6 @@ Thumbs.db
 *.pdf
 !report/*.pdf
 kaggle_runs/*/output/
+
+# App runtime data
+reports/

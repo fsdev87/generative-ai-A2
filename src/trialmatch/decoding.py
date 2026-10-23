@@ -98,14 +98,43 @@ def greedy_uncached(dec, prompt_ids, max_new_tokens, eos_ids=()):
     return DecodeResult(out, prefill_s, total - prefill_s, _peak_memory_mb(dec.device))
 
 
-def greedy_cached(dec, prompt_ids, max_new_tokens, eos_ids=()):
+class PrefixCache:
+    """A KV cache that remembers which tokens its valid entries belong to, so that
+    consecutive prompts sharing a prefix (same patient note, different criteria)
+    only prefill the part after the longest common token prefix."""
+
+    def __init__(self, dec, max_len):
+        self.cache = dec.new_cache(1, max_len)
+        self.tokens = []
+
+    def reuse(self, ids):
+        n = 0
+        for a, b in zip(self.tokens, ids):
+            if a != b:
+                break
+            n += 1
+        # At least one token must be fed to obtain next-token logits.
+        n = max(0, min(n, len(ids) - 1, self.cache.length))
+        self.cache.crop(n)
+        self.tokens = self.tokens[:n]
+        return n
+
+
+def greedy_cached(dec, prompt_ids, max_new_tokens, eos_ids=(), prefix=None):
+    """KV-cached greedy decoding; with `prefix` (a PrefixCache) the cache is shared across calls."""
     ids = _as_ids(prompt_ids, dec.device)
     timer, out = _Timer(dec.device), []
     _start_memory(dec.device)
-    cache = dec.new_cache(1, ids.shape[1] + max_new_tokens)
+    if prefix is None:
+        cache, start = dec.new_cache(1, ids.shape[1] + max_new_tokens), 0
+    else:
+        cache, start = prefix.cache, prefix.reuse(ids[0].tolist())
+        if ids.shape[1] + max_new_tokens > cache.max_len:
+            raise ValueError(f"prompt of {ids.shape[1]} tokens + {max_new_tokens} new tokens exceeds "
+                             f"cache capacity {cache.max_len}")
 
     t0 = timer.now()
-    logits = dec.forward(ids, cache, 0)               # prefill: whole prompt, fills cache
+    logits = dec.forward(ids[:, start:], cache, start)  # prefill: (rest of) prompt, fills cache
     token = int(logits[0, -1].argmax())
     out.append(token)
     t1 = timer.now()
@@ -116,8 +145,11 @@ def greedy_cached(dec, prompt_ids, max_new_tokens, eos_ids=()):
         token = int(logits[0, -1].argmax())
         out.append(token)
     t2 = timer.now()
+    if prefix is not None:
+        prefix.tokens = ids[0].tolist() + out[:-1]  # the tokens whose K/V are now cached
     return DecodeResult(out, t1 - t0, t2 - t1, _peak_memory_mb(dec.device),
-                        round(cache.used_bytes() / 2**20, 2))
+                        round(cache.used_bytes() / 2**20, 2),
+                        stats={"prompt_tokens": int(ids.shape[1]), "reused_prefix_tokens": start})
 
 
 def speculative(target, draft, prompt_ids, max_new_tokens, k=4, eos_ids=()):

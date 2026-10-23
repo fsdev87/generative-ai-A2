@@ -92,6 +92,21 @@ def test_cache_crop_rolls_back(setup):
     assert (after_rollback - expected).abs().max().item() < 1e-4
 
 
+def test_prefix_cache_reuse_matches_fresh_decoding(setup):
+    from trialmatch.decoding import PrefixCache
+
+    tok, _, dec = setup
+    base = PROMPTS["medium"]
+    prompts = [base + " Criterion: age over 50.", base + " Criterion: no prior surgery.", base]
+    prefix = PrefixCache(dec, 512)
+    for i, text in enumerate(prompts):
+        ids = ids_of(tok, text)
+        shared = greedy_cached(dec, ids, 12, prefix=prefix)
+        assert shared.tokens == greedy_cached(dec, ids, 12).tokens
+        if i > 0:
+            assert shared.stats["reused_prefix_tokens"] > 0.8 * ids_of(tok, base).shape[1]
+
+
 class NoisyDraft:
     """A deliberately unreliable draft: the real model with heavy logit noise."""
 
