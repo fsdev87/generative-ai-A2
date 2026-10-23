@@ -21,6 +21,30 @@ MODES = {
 }
 
 
+DRAFT_MEMORY_BYTES = 1_100_000_000  # 0.5B parameters x 2 bytes, plus working memory
+
+
+def available_memory_bytes():
+    """Memory still available to this process (container cgroup limit if any), or None if unknown."""
+    try:  # cgroup v2 (Docker)
+        limit = open("/sys/fs/cgroup/memory.max").read().strip()
+        used = int(open("/sys/fs/cgroup/memory.current").read())
+        for line in open("/sys/fs/cgroup/memory.stat"):
+            if line.startswith("inactive_file "):  # page cache the kernel can reclaim
+                used -= int(line.split()[1])
+        if limit != "max":
+            return int(limit) - used
+    except (OSError, ValueError):
+        pass
+    try:  # Linux without a cgroup limit
+        for line in open("/proc/meminfo"):
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    return None
+
+
 class Settings:
     def __init__(self):
         self.target = os.getenv("TARGET_MODEL", TARGET_MODEL)
@@ -71,6 +95,15 @@ class Engine:
         if self.draft_dec is None:
             from trialmatch.qwen_decoder import QwenDecoder
 
+            # The fp32 0.5B draft needs ~2 GB. Inside Docker the container is killed if it exceeds
+            # its memory limit, so refuse up front with an actionable message instead.
+            free = available_memory_bytes()
+            needed = DRAFT_MEMORY_BYTES * (2 if self.settings.dtype == torch.float32 else 1)
+            if free is not None and free < needed:
+                raise MemoryError(
+                    f"Speculative mode must load the draft model (~{needed / 2**30:.1f} GB), but only "
+                    f"{free / 2**30:.1f} GB of memory is available to the app. Give Docker more memory "
+                    "(see README, 'Memory') or use another decoding mode.")
             draft_hf = load_model(self.settings.draft, adapter=self.settings.draft_adapter,
                                   dtype=self.settings.dtype)
             self.draft_dec = QwenDecoder(draft_hf)

@@ -146,8 +146,8 @@ export default function BenchmarkPage({ health }: { health: Health | null }) {
                   <YAxis label={{ value: "seconds", angle: -90, position: "insideLeft" }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="prefill" stackId="t" fill="#94a3b8" name="prefill (s)" />
-                  <Bar dataKey="decode" stackId="t" fill="#2563eb" name="decode (s)" />
+                  <Bar dataKey="prefill" stackId="t" fill="#94a3b8" name="prefill (s)" isAnimationActive={false} />
+                  <Bar dataKey="decode" stackId="t" fill="#2563eb" name="decode (s)" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -172,7 +172,7 @@ export default function BenchmarkPage({ health }: { health: Health | null }) {
                   }} />
                   <Legend />
                   {(Object.keys(MODE_COLORS) as Mode[]).map((m) => (
-                    <Line key={m} dataKey={m} stroke={MODE_COLORS[m]} connectNulls dot />
+                    <Line key={m} dataKey={m} stroke={MODE_COLORS[m]} connectNulls dot isAnimationActive={false} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>

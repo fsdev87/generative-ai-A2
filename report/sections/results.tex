@@ -355,7 +355,17 @@ creation time.
 
 \begin{figure*}[t]
 \centering
-\TBD{} (screenshots)
-\caption{The screening application. \TBD}
+\begin{minipage}[t]{0.49\textwidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{figures/screens/screen_top}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\textwidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{figures/screens/benchmark_crop}
+\end{minipage}
+\caption{The application running in Docker on the CPU-only laptop with the published adapter. Left:
+screening six criteria of a validation patient; the selected result's cited sentences are highlighted
+in the numbered note, the explanation quotes them, and the expert label is shown for comparison
+(all six match). Right: the live benchmark page comparing KV-cached, uncached and speculative
+decoding on the same prompt (identical tokens, 100\% draft acceptance; uncached decoding is
+8.5$\times$ slower), and the live attention-kernel accuracy check.}
 \label{fig:app}
 \end{figure*}

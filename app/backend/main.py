@@ -48,6 +48,11 @@ async def too_long(_req: Request, exc: InputTooLong):
     return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
+@app.exception_handler(MemoryError)
+async def out_of_memory(_req: Request, exc: MemoryError):
+    return JSONResponse(status_code=503, content={"detail": str(exc) or "Not enough memory."})
+
+
 def require_ready():
     if engine.state == "loading":
         raise HTTPException(503, "The model is still loading. Please wait a moment and retry.")

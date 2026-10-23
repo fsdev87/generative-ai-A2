@@ -8,6 +8,32 @@ Dockerized **React + FastAPI** application for screening and live inference benc
 
 > **Disclaimer:** educational screening prototype, not a clinical enrollment decision tool.
 
+## Links
+
+| What | Where |
+|---|---|
+| Technical report (IEEE, LaTeX) | [report/main.pdf](report/main.pdf) — sources in [report/](report/) |
+| Fine-tuned adapter (target) | [farazmust123/qwen2.5-1.5b-trialgpt-lora](https://huggingface.co/farazmust123/qwen2.5-1.5b-trialgpt-lora) |
+| Fine-tuned adapter (draft) | [farazmust123/qwen2.5-0.5b-trialgpt-draft-lora](https://huggingface.co/farazmust123/qwen2.5-0.5b-trialgpt-draft-lora) |
+| Split manifest | [data/splits/split_manifest.json](data/splits/split_manifest.json) |
+| Training / evaluation / benchmark logs | [results/](results/) |
+| Decision and failure log | [docs/experiment_log.md](docs/experiment_log.md) |
+| Demo video (5–7 min) | *link added on submission* |
+
+## Results (held-out test split, 206 criteria, greedy decoding)
+
+| Model | Accuracy | Macro-F1 | Evidence micro-F1 |
+|---|---|---|---|
+| Qwen2.5-1.5B-Instruct, zero-shot | 0.039 | 0.077 | 0.095 |
+| **+ LoRA (final)** | **0.748** | **0.569** | **0.513** |
+| seeds 42/43/44 (mean ± s.d.) | 0.738 ± 0.013 | 0.551 ± 0.017 | 0.544 ± 0.036 |
+
+Inference (T4, fp16, batch 1): KV-cached decoding is token-identical to recomputation in fp32 and
+2.6–13× faster; tiled online-softmax attention matches exact attention (max error 9.8e-7 in fp32)
+and needs 17 MB instead of 2.3 GB at 4,096 tokens but is slower than fused SDPA; greedy speculative
+decoding is output-identical with 93% draft acceptance but no speed-up (measured draft/target step
+cost ratio 0.84). Details, error analysis and limitations are in the report.
+
 ## Quick start (application)
 
 Requirements: Docker Desktop (8 GB RAM available to Docker recommended).
@@ -34,6 +60,22 @@ next to `docker-compose.yml`.
 | `ANSWER_ORDER` | `label_first` | output schema the adapter was trained with |
 | `DTYPE` | `float32` | model dtype on CPU |
 | `MAX_NEW_TOKENS`, `SPEC_K` | `64`, `4` | generation budget, speculative draft length |
+
+### Memory
+
+The fp32 target model needs about 6.3 GB inside the container; **speculative decoding loads the
+0.5B draft model as well (~2 GB more)**. Docker Desktop on Windows (WSL 2) gives containers half of
+the machine's RAM by default (about 7.6 GB on a 16 GB laptop), which is enough for every mode except
+speculative decoding. If memory is insufficient the app refuses speculative mode with an explanatory
+message instead of crashing. To enable it, raise the limit and restart Docker:
+
+```
+# %UserProfile%\.wslconfig
+[wsl2]
+memory=10GB
+```
+
+then run `wsl --shutdown` and start Docker Desktop again.
 
 ### Without Docker (development)
 

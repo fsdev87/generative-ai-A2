@@ -66,7 +66,7 @@ select.full { width: 100%; margin-bottom: 8px; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
 .row input:not([type]) { flex: 1; min-width: 180px; }
 .row label { margin: 0; display: flex; gap: 6px; align-items: center; }
-.row label input { width: 90px; }
+.row label input[type="number"] { width: 90px; }
 
 button, .button {
   font: inherit; font-size: 14px; border-radius: 8px; padding: 8px 14px; cursor: pointer;
@@ -146,3 +146,5 @@ input[type="range"] { width: 100%; padding: 0; }
 .good-text { color: var(--good); font-weight: 600; }
 .bad-text { color: var(--bad); font-weight: 600; }
 .chart { width: 100%; margin: 10px 0; }
+
+.table tr.sub td { color: var(--muted); font-size: 12.5px; }
