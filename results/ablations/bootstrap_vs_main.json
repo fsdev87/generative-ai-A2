@@ -1,0 +1,83 @@
+{
+  "method": "paired bootstrap over val annotations, B=2000, seed 0; difference vs main (evidence-first, r16, 3 epochs)",
+  "results": {
+    "oversample": {
+      "accuracy": {
+        "mean_diff": -0.0097,
+        "ci95": [
+          -0.0631,
+          0.0437
+        ],
+        "p_better": 0.329
+      },
+      "macro_f1": {
+        "mean_diff": 0.0633,
+        "ci95": [
+          -0.0313,
+          0.1766
+        ],
+        "p_better": 0.786
+      },
+      "evidence_micro_f1": {
+        "mean_diff": -0.0545,
+        "ci95": [
+          -0.1185,
+          0.0072
+        ],
+        "p_better": 0.048
+      }
+    },
+    "label_first": {
+      "accuracy": {
+        "mean_diff": -0.0045,
+        "ci95": [
+          -0.0291,
+          0.0194
+        ],
+        "p_better": 0.295
+      },
+      "macro_f1": {
+        "mean_diff": 0.0687,
+        "ci95": [
+          -0.0302,
+          0.1684
+        ],
+        "p_better": 0.661
+      },
+      "evidence_micro_f1": {
+        "mean_diff": 0.0076,
+        "ci95": [
+          -0.0512,
+          0.0678
+        ],
+        "p_better": 0.581
+      }
+    },
+    "epochs5": {
+      "accuracy": {
+        "mean_diff": 0.0047,
+        "ci95": [
+          -0.0291,
+          0.0388
+        ],
+        "p_better": 0.562
+      },
+      "macro_f1": {
+        "mean_diff": 0.0083,
+        "ci95": [
+          -0.015,
+          0.0329
+        ],
+        "p_better": 0.755
+      },
+      "evidence_micro_f1": {
+        "mean_diff": 0.0328,
+        "ci95": [
+          -0.0185,
+          0.0886
+        ],
+        "p_better": 0.89
+      }
+    }
+  }
+}

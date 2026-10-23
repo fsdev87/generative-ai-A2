@@ -30,6 +30,7 @@ import torch
 from trialmatch.data import read_jsonl
 from trialmatch.decoding import greedy_cached, greedy_uncached, speculative
 from trialmatch.modeling import DRAFT_MODEL, TARGET_MODEL, load_model, load_tokenizer, prompt_text
+from trialmatch.prompting import ANSWER_ORDERS
 from trialmatch.qwen_decoder import QwenDecoder
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,10 +46,10 @@ def median_run(fn, repeats):
     return best.tokens, summary
 
 
-def length_prompts(tok, val_records, targets):
+def length_prompts(tok, val_records, targets, order):
     """Real screening prompts whose token counts are closest to each target length;
     targets beyond the dataset are built by concatenating several notes."""
-    texts = [prompt_text(tok, r) for r in val_records]
+    texts = [prompt_text(tok, r, order) for r in val_records]
     lens = [len(tok(t, add_special_tokens=False)["input_ids"]) for t in texts]
     prompts = {}
     for target in targets:
@@ -92,6 +93,7 @@ def main():
     parser.add_argument("--draft-adapter", default=None)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--task-prompts", type=int, default=40)
+    parser.add_argument("--answer-order", choices=ANSWER_ORDERS, default="evidence_first")
     parser.add_argument("--quick", action="store_true")
     args = parser.parse_args()
 
@@ -111,7 +113,7 @@ def main():
         "device": torch.cuda.get_device_name(0) if device.type == "cuda" else "cpu",
         "dtype": str(target.dtype), "torch": torch.__version__,
         "target": args.target, "adapter": args.adapter,
-        "draft": args.draft, "draft_adapter": args.draft_adapter,
+        "draft": args.draft, "draft_adapter": args.draft_adapter, "answer_order": args.answer_order,
         "decoding": "greedy (argmax), batch size 1, repetition_penalty 1.0",
         "repeats": args.repeats, "warmup": 1,
         "weights_mb": {
@@ -122,7 +124,7 @@ def main():
     }
 
     val = read_jsonl(ROOT / "data" / "processed" / "val.jsonl")
-    prompts = length_prompts(tok, val, prompt_lens)
+    prompts = length_prompts(tok, val, prompt_lens, args.answer_order)
     for p_len, ids in prompts.items():
         for n in output_lens:
             ids = ids.to(device)
@@ -154,7 +156,8 @@ def main():
     k_task = 4
     cached_rows, spec_rows, equal = [], [], 0
     for record in val[:task_n]:
-        ids = tok(prompt_text(tok, record), return_tensors="pt", add_special_tokens=False)["input_ids"].to(device)
+        ids = tok(prompt_text(tok, record, args.answer_order), return_tensors="pt",
+                  add_special_tokens=False)["input_ids"].to(device)
         a_tokens, a = median_run(lambda: greedy_cached(target, ids, 64, eos_ids), args.repeats)
         b_tokens, b = median_run(lambda: speculative(target, draft, ids, 64, k=k_task, eos_ids=eos_ids),
                                  args.repeats)

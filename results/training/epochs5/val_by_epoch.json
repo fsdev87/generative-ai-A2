@@ -1,0 +1,47 @@
+[
+  {
+    "epoch": 1,
+    "step": 76,
+    "val_loss": 0.14345,
+    "accuracy": 0.7136,
+    "macro_f1": 0.3454,
+    "evidence_micro_f1": 0.4,
+    "parse_ok_rate": 1.0
+  },
+  {
+    "epoch": 2,
+    "step": 152,
+    "val_loss": 0.13561,
+    "accuracy": 0.7282,
+    "macro_f1": 0.417,
+    "evidence_micro_f1": 0.5328,
+    "parse_ok_rate": 1.0
+  },
+  {
+    "epoch": 3,
+    "step": 228,
+    "val_loss": 0.1417,
+    "accuracy": 0.7427,
+    "macro_f1": 0.4487,
+    "evidence_micro_f1": 0.5738,
+    "parse_ok_rate": 1.0
+  },
+  {
+    "epoch": 4,
+    "step": 304,
+    "val_loss": 0.17255,
+    "accuracy": 0.7427,
+    "macro_f1": 0.451,
+    "evidence_micro_f1": 0.5635,
+    "parse_ok_rate": 1.0
+  },
+  {
+    "epoch": 5,
+    "step": 380,
+    "val_loss": 0.17879,
+    "accuracy": 0.7524,
+    "macro_f1": 0.4539,
+    "evidence_micro_f1": 0.5771,
+    "parse_ok_rate": 1.0
+  }
+]

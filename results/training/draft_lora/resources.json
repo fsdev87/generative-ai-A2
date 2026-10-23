@@ -1,0 +1,5 @@
+{
+  "train_seconds": 457.1,
+  "best_epoch": 2,
+  "peak_gpu_memory_gb": 3.34
+}
