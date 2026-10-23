@@ -1,0 +1,12 @@
+# CPU PyTorch: pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+transformers==5.20.2
+datasets==5.1.0
+peft==0.21.2
+accelerate
+numpy==2.5.4
+pandas
+scikit-learn
+matplotlib
+kaggle==2.2.5
+huggingface_hub

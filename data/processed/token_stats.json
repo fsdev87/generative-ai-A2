@@ -1,0 +1,65 @@
+{
+  "tokenizer": "Qwen/Qwen2.5-1.5B-Instruct",
+  "splits": {
+    "train": {
+      "prompt_tokens": {
+        "min": 256,
+        "max": 625,
+        "mean": 342.8
+      },
+      "target_tokens": {
+        "min": 12,
+        "max": 38,
+        "mean": 14.8
+      },
+      "prompt_plus_target_max": 651,
+      "examples_exceeding": {
+        "256": 603,
+        "384": 153,
+        "512": 38,
+        "768": 0,
+        "1024": 0
+      }
+    },
+    "val": {
+      "prompt_tokens": {
+        "min": 295,
+        "max": 464,
+        "mean": 356.2
+      },
+      "target_tokens": {
+        "min": 12,
+        "max": 25,
+        "mean": 14.3
+      },
+      "prompt_plus_target_max": 485,
+      "examples_exceeding": {
+        "256": 206,
+        "384": 57,
+        "512": 0,
+        "768": 0,
+        "1024": 0
+      }
+    },
+    "test": {
+      "prompt_tokens": {
+        "min": 268,
+        "max": 529,
+        "mean": 326.4
+      },
+      "target_tokens": {
+        "min": 13,
+        "max": 28,
+        "mean": 14.3
+      },
+      "prompt_plus_target_max": 545,
+      "examples_exceeding": {
+        "256": 206,
+        "384": 25,
+        "512": 2,
+        "768": 0,
+        "1024": 0
+      }
+    }
+  }
+}
