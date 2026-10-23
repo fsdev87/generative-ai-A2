@@ -84,7 +84,7 @@ def parse_output(text, criterion_type, valid_ids):
     if match:
         try:
             obj = json.loads(match.group(0))
-            label = str(obj.get("label", "")).strip().lower()
+            label = str(obj.get("label", "")).strip().lower().replace("_", " ")
             evidence = obj.get("evidence", [])
             if not isinstance(evidence, list):
                 evidence = []
@@ -95,7 +95,7 @@ def parse_output(text, criterion_type, valid_ids):
             pass
 
     # Fallback: longest allowed label mentioned in the text ("not included" before "included").
-    lowered = text.lower()
+    lowered = text.lower().replace("_", " ")
     for label in sorted(allowed, key=len, reverse=True):
         if label in lowered:
             return label, [], False
