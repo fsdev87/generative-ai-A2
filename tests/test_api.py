@@ -38,6 +38,12 @@ def test_sentence_and_criteria_parsing():
     assert split_sentences("0. First.\n1. Second.") == [[0, "First."], [1, "Second."]]
     block = "Inclusion Criteria:\n\n* Age 18 or older\n* Diagnosed with\n  stable angina\n- Signed consent"
     assert split_criteria(block) == ["Age 18 or older", "Diagnosed with stable angina", "Signed consent"]
+    # ClinicalTrials.gov Markdown: escaped numbering and punctuation
+    md = ("Inclusion Criteria:\n\n* 1\\. Subject with uterine fibroids\n\nIf the couple has failed to conceive, test.\n\n"
+          "* 2\\. Age \\>= 18 \\(inclusive\\)\n  * nested item")
+    assert split_criteria(md) == ["Subject with uterine fibroids If the couple has failed to conceive, test.",
+                                  "Age >= 18 (inclusive)", "nested item"]
+    assert split_criteria("Age over 18\nNo smoking") == ["Age over 18", "No smoking"]
 
 
 def test_aggregation_rules():

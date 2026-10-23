@@ -12,7 +12,9 @@ _NUMBERED = re.compile(r"^\s*\d+\.\s+")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(])")
 # Do not split after common clinical abbreviations ("Dr. Smith", "approx. 5").
 _ABBREVIATIONS = ("dr.", "mr.", "mrs.", "ms.", "approx.", "e.g.", "i.e.", "vs.", "no.", "st.", "fig.")
-_BULLET = re.compile(r"^\s*(?:[-*•●]|\(?\d+[.)]|\(?[a-z][.)])\s+", re.IGNORECASE)
+# Bullets and numbering; ClinicalTrials.gov returns Markdown, so "1." may arrive escaped as "1\.".
+_BULLET = re.compile(r"^\s*(?:[-*+•●]|\(?\d+\\?[.)]|\(?[a-z]\\?[.)])\s+", re.IGNORECASE)
+_MD_ESCAPE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!<>~|])")
 
 
 def split_sentences(note):
@@ -41,19 +43,32 @@ def split_sentences(note):
     return [[i, s] for i, s in enumerate(sentences)]
 
 
+def _strip_bullets(line):
+    while _BULLET.match(line):  # e.g. "* 1\. text": a bullet followed by a number
+        line = _BULLET.sub("", line, count=1)
+    return line.strip()
+
+
+def _is_header(line):
+    return line.strip().lower().rstrip(":").endswith("criteria")
+
+
 def split_criteria(block):
-    """Split a pasted criteria block (bullets, numbering or one per line) into items."""
+    """Split a pasted criteria block (bullets, numbering or one per line) into items.
+
+    If the block uses bullets/numbering, lines without one continue the previous item
+    (ClinicalTrials.gov often breaks one criterion into several paragraphs); otherwise
+    every non-empty line is its own item.
+    """
+    lines = [l for l in block.splitlines() if l.strip() and not _is_header(l)]
+    bulleted = any(_BULLET.match(l) for l in lines)
     items = []
-    for line in block.splitlines():
-        if not line.strip():
-            continue
-        if _BULLET.match(line) or not items:
-            items.append(_BULLET.sub("", line).strip())
-        elif line.startswith((" ", "\t")):
-            items[-1] += " " + line.strip()   # indented continuation of the previous item
+    for line in lines:
+        if not items or (_BULLET.match(line) if bulleted else not line.startswith((" ", "\t"))):
+            items.append(_strip_bullets(line))
         else:
-            items.append(line.strip())
-    return [i for i in items if i and not i.lower().rstrip(":").endswith("criteria")]
+            items[-1] += " " + line.strip()
+    return [_MD_ESCAPE.sub(r"\1", i) for i in items if i]
 
 
 def fetch_trial(nct_id, timeout=10):

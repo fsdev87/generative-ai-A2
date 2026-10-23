@@ -61,6 +61,23 @@ main run, so environment and memory failures cost seconds of GPU time, not minut
 * **Rejected:** dynamic int8 quantization of all Linear layers (`torch.ao.quantization.quantize_dynamic`):
   0.55x speed (slower) on this CPU and 2/12 correct labels vs 10/12 for fp32 on 12 val prompts.
 
+## End-to-end application checks (Docker, CPU, published adapter)
+
+* App API vs the offline evaluation predictions (Kaggle T4) on 16 validation criteria of two
+  patient/trial groups: 16/16 identical labels and 16/16 identical evidence sets.
+* Unseen patient (written for the demo, not from the dataset), six criteria: identical outputs in
+  KV-cached, tiled-attention and speculative modes; 5/6 clinically reasonable. The error is
+  "HbA1c between 7.0% and 10.0%" -> not enough information while citing "HbA1c is 8.4%": the same
+  numeric-threshold under-inference seen in the test error analysis.
+* Downloaded HTML report contains the disclaimer, every criterion and the provenance.
+* ClinicalTrials.gov returns Markdown (`* 1\. text`, escaped punctuation, criteria split into
+  several un-bulleted paragraphs). The first parser kept "1\." prefixes and split one criterion
+  into three; fixed (stacked prefixes stripped, un-bulleted lines continue the previous item,
+  Markdown escapes removed) and covered by a test.
+* Speculative mode in a 7.6 GiB Docker VM loaded the draft and the container was killed (restart
+  count 1). Fixed with a memory check that returns a 503 explanation; with WSL memory=10GB the
+  draft fits (peak 8.3 GiB).
+
 ## Results so far (validation, greedy)
 
 | Model | Acc | Macro-F1 | Evidence micro-F1 |
