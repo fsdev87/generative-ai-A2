@@ -17,10 +17,17 @@ def sh(cmd):
     subprocess.run(cmd, shell=True, check=True)
 
 
-sh("nvidia-smi")
-sh(f"git clone -q {REPO} repo && cd repo && git checkout -q {REF} && git rev-parse HEAD")
-sh("pip install -q transformers==5.20.2 peft==0.21.2 && pip install -q --no-deps -e repo")
-sh("python -c \"import torch, transformers, peft; "
-   "print('torch', torch.__version__, 'transformers', transformers.__version__, 'peft', peft.__version__)\"")
-sh("cd repo && python scripts/train_lora.py --out /kaggle/working/lora_r16 --baseline")
-sh("rm -rf repo")  # keep the downloadable output small
+try:
+    sh("nvidia-smi")
+    sh(f"git clone -q {REPO} repo && cd repo && git checkout -q {REF} && git rev-parse HEAD")
+    # Kaggle ships torchao 0.10, which peft >= 0.18 rejects at LoRA injection time; we do not use it.
+    sh("pip uninstall -q -y torchao")
+    sh("pip install -q transformers==5.20.2 peft==0.21.2 && pip install -q --no-deps -e repo")
+    sh("python -c \"import torch, transformers, peft; "
+       "print('torch', torch.__version__, 'transformers', transformers.__version__, 'peft', peft.__version__)\"")
+    # Preflight: a few steps on 4 examples so environment errors fail in seconds, not after the baseline.
+    sh("cd repo && python scripts/train_lora.py --out /tmp/preflight --epochs 1 "
+       "--limit-train 4 --limit-val 4 --eval-batch-size 4")
+    sh("cd repo && python scripts/train_lora.py --out /kaggle/working/lora_r16 --baseline")
+finally:
+    sh("rm -rf repo")  # keep the downloadable output small

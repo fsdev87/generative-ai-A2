@@ -33,3 +33,4 @@ Thumbs.db
 *.egg-info/
 *.pdf
 !report/*.pdf
+kaggle_runs/*/output/
