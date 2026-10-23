@@ -38,8 +38,9 @@ def load_model(model_name, adapter=None, device=None, dtype=None):
     return model
 
 
-def prompt_text(tok, record):
-    return tok.apply_chat_template(build_messages(record), add_generation_prompt=True, tokenize=False)
+def prompt_text(tok, record, order="evidence_first"):
+    return tok.apply_chat_template(build_messages(record, order), add_generation_prompt=True,
+                                   tokenize=False)
 
 
 @torch.no_grad()

@@ -8,11 +8,11 @@ from .prompting import parse_output
 
 
 @torch.no_grad()
-def predict(model, tok, records, batch_size=8, max_new_tokens=64, log_every=0):
+def predict(model, tok, records, batch_size=8, max_new_tokens=64, log_every=0, order="evidence_first"):
     predictions = []
     for i in range(0, len(records), batch_size):
         batch = records[i:i + batch_size]
-        outputs = generate_batch(model, tok, [prompt_text(tok, r) for r in batch], max_new_tokens)
+        outputs = generate_batch(model, tok, [prompt_text(tok, r, order) for r in batch], max_new_tokens)
         for record, text in zip(batch, outputs):
             label, evidence, ok = parse_output(
                 text, record["criterion_type"], [sid for sid, _ in record["sentences"]]

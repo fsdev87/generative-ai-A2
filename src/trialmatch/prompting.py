@@ -1,9 +1,10 @@
 """Prompt construction, training targets, and robust parsing of model output.
 
-Output schema (one JSON object, evidence first so the model commits to the cited
-sentences before the label):
+Output schema (one JSON object). The default puts evidence first so the model commits
+to the cited sentences before the label; "label_first" is the ablation:
 
-    {"evidence": [<sentence ids>], "label": "<label>"}
+    evidence_first: {"evidence": [<sentence ids>], "label": "<label>"}
+    label_first:    {"label": "<label>", "evidence": [<sentence ids>]}
 """
 
 import json
@@ -34,11 +35,18 @@ LABEL_DEFINITIONS = {
 }
 
 
+ANSWER_ORDERS = ("evidence_first", "label_first")
+_SCHEMAS = {
+    "evidence_first": '{"evidence": [<sentence ids>], "label": "<label>"}',
+    "label_first": '{"label": "<label>", "evidence": [<sentence ids>]}',
+}
+
+
 def format_note(sentences):
     return "\n".join(f"{sid}. {text}" for sid, text in sentences)
 
 
-def build_user_prompt(sentences, criterion_type, criterion_text):
+def build_user_prompt(sentences, criterion_type, criterion_text, order="evidence_first"):
     definitions = "\n".join(
         f'- "{label}": {meaning}' for label, meaning in LABEL_DEFINITIONS[criterion_type].items()
     )
@@ -50,23 +58,25 @@ def build_user_prompt(sentences, criterion_type, criterion_text):
         f"Labels:\n{definitions}\n\n"
         "Cite the IDs of the patient sentences that support your label "
         "(an empty list if no sentence is relevant).\n"
-        'Answer with JSON only: {"evidence": [<sentence ids>], "label": "<label>"}'
+        f"Answer with JSON only: {_SCHEMAS[order]}"
     )
 
 
-def build_messages(record):
+def build_messages(record, order="evidence_first"):
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "user",
             "content": build_user_prompt(
-                record["sentences"], record["criterion_type"], record["criterion_text"]
+                record["sentences"], record["criterion_type"], record["criterion_text"], order
             ),
         },
     ]
 
 
-def build_target(record):
+def build_target(record, order="evidence_first"):
+    if order == "label_first":
+        return json.dumps({"label": record["label"], "evidence": record["evidence"]})
     return json.dumps({"evidence": record["evidence"], "label": record["label"]})
 
 

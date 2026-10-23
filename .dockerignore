@@ -1,0 +1,15 @@
+.git
+.venv
+**/__pycache__
+**/*.egg-info
+frontend/node_modules
+frontend/dist
+kaggle_runs
+checkpoints
+data/raw
+data/processed/train.jsonl
+data/processed/test.jsonl
+reports
+report
+*.pdf
+.env

@@ -31,6 +31,7 @@ class Settings:
         self.max_prompt_tokens = int(os.getenv("MAX_PROMPT_TOKENS", "2048"))
         self.max_new_tokens = int(os.getenv("MAX_NEW_TOKENS", "64"))
         self.spec_k = int(os.getenv("SPEC_K", "4"))
+        self.answer_order = os.getenv("ANSWER_ORDER", "evidence_first")  # must match the adapter
         self.threads = int(os.getenv("TORCH_THREADS", "0"))
 
 
@@ -98,8 +99,8 @@ class Engine:
 
     def prompt_ids(self, sentences, ctype, ctext):
         record = {"sentences": sentences, "criterion_type": ctype, "criterion_text": ctext}
-        text = self.tok.apply_chat_template(build_messages(record), add_generation_prompt=True,
-                                            tokenize=False)
+        text = self.tok.apply_chat_template(build_messages(record, self.settings.answer_order),
+                                            add_generation_prompt=True, tokenize=False)
         ids = self.tok(text, add_special_tokens=False)["input_ids"]
         if len(ids) > self.settings.max_prompt_tokens:
             # Never truncate: the cut could remove the evidence the decision depends on.

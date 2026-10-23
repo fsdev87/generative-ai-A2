@@ -1,0 +1,7 @@
+# Runtime dependencies of the screening application (torch is installed separately, CPU build).
+transformers==5.20.2
+peft==0.21.2
+accelerate
+numpy==2.5.4
+fastapi==0.161.1
+uvicorn[standard]==0.54.0

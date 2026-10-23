@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import collections
 import json
 import math
 import random
@@ -33,7 +34,7 @@ from transformers import get_cosine_schedule_with_warmup
 from trialmatch.data import read_jsonl, write_jsonl
 from trialmatch.evaluation import evaluate, headline
 from trialmatch.modeling import TARGET_MODEL, load_model, load_tokenizer, pick_device, prompt_text
-from trialmatch.prompting import build_target
+from trialmatch.prompting import ANSWER_ORDERS, build_target
 
 ROOT = Path(__file__).resolve().parents[1]
 LORA_TARGETS = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
@@ -46,10 +47,10 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
 
 
-def encode(tok, record, max_length):
+def encode(tok, record, max_length, order="evidence_first"):
     """Prompt + answer token IDs with the prompt masked out of the loss."""
-    prompt_ids = tok(prompt_text(tok, record), add_special_tokens=False)["input_ids"]
-    answer_ids = tok(build_target(record) + tok.eos_token, add_special_tokens=False)["input_ids"]
+    prompt_ids = tok(prompt_text(tok, record, order), add_special_tokens=False)["input_ids"]
+    answer_ids = tok(build_target(record, order) + tok.eos_token, add_special_tokens=False)["input_ids"]
     if len(prompt_ids) + len(answer_ids) > max_length:
         # Never truncate silently: truncation could remove patient evidence sentences.
         raise ValueError(
@@ -76,6 +77,19 @@ def collate(examples, pad_id):
         "labels": torch.tensor(labels),
         "attention_mask": torch.tensor(attention),
     }
+
+
+def repeat_factors(records, cap):
+    """Oversampling factor per example: round(sqrt(n_majority / n_class)), capped.
+
+    Classes are (criterion_type, label) pairs, so e.g. inclusion "not applicable" and
+    exclusion "not applicable" are balanced separately. The square root softens the
+    rebalancing so the majority class is not drowned out.
+    """
+    counts = collections.Counter((r["criterion_type"], r["label"]) for r in records)
+    majority = max(counts.values())
+    return [min(cap, max(1, round(math.sqrt(majority / counts[(r["criterion_type"], r["label"])]))))
+            for r in records]
 
 
 @torch.no_grad()
@@ -115,6 +129,10 @@ def main():
     parser.add_argument("--limit-val", type=int, default=None, help="smoke tests only")
     parser.add_argument("--longest-first", action="store_true",
                         help="with --limit-train: take the longest examples (memory preflight)")
+    parser.add_argument("--answer-order", choices=ANSWER_ORDERS, default="evidence_first")
+    parser.add_argument("--oversample", action="store_true",
+                        help="repeat rare-label examples (sqrt inverse frequency) every epoch")
+    parser.add_argument("--oversample-cap", type=int, default=8)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -143,7 +161,8 @@ def main():
     if args.baseline:
         print("== zero-shot baseline on val", flush=True)
         t0 = time.perf_counter()
-        preds, report = evaluate(model, tok, val_records, batch_size=args.eval_batch_size)
+        preds, report = evaluate(model, tok, val_records, batch_size=args.eval_batch_size,
+                                 order=args.answer_order)
         report["seconds"] = round(time.perf_counter() - t0, 1)
         (out / "baseline_val").mkdir(exist_ok=True)
         write_jsonl(out / "baseline_val" / "predictions.jsonl", preds)
@@ -162,16 +181,22 @@ def main():
     total = sum(p.numel() for p in model.parameters())
     print(f"trainable params: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)", flush=True)
 
-    train_examples = [encode(tok, r, args.max_length) for r in train_records]
+    train_examples = [encode(tok, r, args.max_length, args.answer_order) for r in train_records]
     # Teacher-forced validation loss materializes full-vocabulary logits like training
     # does, so it uses the training batch size, not the larger generation batch size.
     val_batches = [
-        collate([encode(tok, r, args.max_length) for r in val_records[i:i + args.batch_size]],
-                tok.pad_token_id)
+        collate([encode(tok, r, args.max_length, args.answer_order)
+                 for r in val_records[i:i + args.batch_size]], tok.pad_token_id)
         for i in range(0, len(val_records), args.batch_size)
     ]
 
-    steps_per_epoch = math.ceil(len(train_examples) / (args.batch_size * args.grad_accum))
+    # Indices visited per epoch; with --oversample rare-label examples appear several times.
+    factors = repeat_factors(train_records, args.oversample_cap) if args.oversample else [1] * len(train_records)
+    epoch_indices = [i for i, f in enumerate(factors) for _ in range(f)]
+    if args.oversample:
+        print(f"oversampling: {len(train_records)} -> {len(epoch_indices)} examples per epoch", flush=True)
+
+    steps_per_epoch = math.ceil(len(epoch_indices) / (args.batch_size * args.grad_accum))
     total_steps = steps_per_epoch * args.epochs
     optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
                                   lr=args.lr, weight_decay=args.weight_decay)
@@ -189,9 +214,9 @@ def main():
 
     for epoch in range(1, args.epochs + 1):
         model.train()
-        order = list(range(len(train_examples)))
-        shuffler.shuffle(order)
-        micro_batches = [order[i:i + args.batch_size] for i in range(0, len(order), args.batch_size)]
+        visit = list(epoch_indices)
+        shuffler.shuffle(visit)
+        micro_batches = [visit[i:i + args.batch_size] for i in range(0, len(visit), args.batch_size)]
 
         running = 0.0
         for mb_index, idx in enumerate(micro_batches):
@@ -223,7 +248,8 @@ def main():
 
         val_loss = validation_loss(model, val_batches, device, amp_dtype)
         model.eval()
-        preds, report = evaluate(model, tok, val_records, batch_size=args.eval_batch_size)
+        preds, report = evaluate(model, tok, val_records, batch_size=args.eval_batch_size,
+                                 order=args.answer_order)
         summary = {"epoch": epoch, "step": step, "val_loss": round(val_loss, 5), **headline(report)}
         val_by_epoch.append(summary)
         print("validation:", summary, flush=True)

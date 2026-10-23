@@ -4,7 +4,6 @@ import json
 import re
 
 import numpy as np
-from datasets import load_dataset
 
 DATASET_ID = "ncbi/TrialGPT-Criterion-Annotations"
 SPLIT_SEED = 42
@@ -31,6 +30,8 @@ _SENTENCE_RE = re.compile(r"^(\d+)\.\s+(.*)$")
 
 def load_annotations(cache_dir=None):
     """Load all 1,015 annotations with the leaky columns removed."""
+    from datasets import load_dataset  # not needed (or installed) in the app image
+
     ds = load_dataset(DATASET_ID, split="train", cache_dir=cache_dir)
     ds = ds.remove_columns(LEAKY_COLUMNS)
     return [dict(row) for row in ds]

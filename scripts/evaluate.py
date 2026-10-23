@@ -18,6 +18,7 @@ from pathlib import Path
 from trialmatch.data import read_jsonl, write_jsonl
 from trialmatch.evaluation import evaluate, headline
 from trialmatch.modeling import TARGET_MODEL, load_model, load_tokenizer
+from trialmatch.prompting import ANSWER_ORDERS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +33,8 @@ def main():
     parser.add_argument("--limit", type=int, default=None, help="evaluate only the first N (smoke tests)")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument("--answer-order", choices=ANSWER_ORDERS, default="evidence_first",
+                        help="must match the order the adapter was trained with")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -44,13 +47,15 @@ def main():
 
     start = time.perf_counter()
     predictions, report = evaluate(model, tok, records, batch_size=args.batch_size,
-                                   max_new_tokens=args.max_new_tokens, log_every=5)
+                                   max_new_tokens=args.max_new_tokens, log_every=5,
+                                   order=args.answer_order)
     report["settings"] = {
         "model": args.model,
         "adapter": args.adapter,
         "split": args.split,
         "n": len(records),
-        "decoding": {"strategy": "greedy", "do_sample": False,
+        "answer_order": args.answer_order,
+        "decoding": {"strategy": "greedy", "do_sample": False, "repetition_penalty": 1.0,
                      "max_new_tokens": args.max_new_tokens, "batch_size": args.batch_size},
         "device": str(model.device),
         "dtype": str(model.dtype),
