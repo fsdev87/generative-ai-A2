@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-src/trialmatch/__init__.py
-src/trialmatch/data.py
-src/trialmatch/prompting.py
-src/trialmatch.egg-info/PKG-INFO
-src/trialmatch.egg-info/SOURCES.txt
-src/trialmatch.egg-info/dependency_links.txt
-src/trialmatch.egg-info/top_level.txt

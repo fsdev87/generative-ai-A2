@@ -28,3 +28,8 @@ kaggle.json
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Build metadata and course materials
+*.egg-info/
+*.pdf
+!report/*.pdf
