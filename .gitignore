@@ -54,3 +54,4 @@ notes/
 
 # Submission package (uploaded to Classroom, not versioned)
 *.zip
+!report/figures/*.pdf
