@@ -316,6 +316,15 @@ prompts from 75.7\% to 92.6\% ($k=4$), and over longer generations from 61--84\%
 (Fig.~\ref{fig:spec}). Despite this, speculative decoding is not faster on the T4: on the 40
 screening prompts it runs at 0.75$\times$ (base draft) and 0.90$\times$ (fine-tuned draft) of the
 speed of KV-cached greedy, and over the length grid the speed-up ranges from 0.51 (base draft, $k=8$, short prompt) to 1.06.
+With 128 new tokens and $k=4$, the fine-tuned draft gives 26.4--31.4 tokens/s against 31.2--34.2
+for KV-cached greedy.
+
+\textbf{Memory.} Speculative decoding keeps both models resident: 2.88\,GiB of fp16 target weights
+plus 0.92\,GiB for the draft. In the benchmark both were loaded for every mode, so the measured peak
+difference is the draft's own KV cache plus the activations of verifying $k{+}1$ tokens at once:
+peak memory rises from 3.92 to 4.00\,GiB at a 294-token prompt and from 4.52 to 5.12\,GiB at 2,048
+tokens ($k=4$, 128 new tokens). On the CPU-only laptop, where the models run in fp32, the draft adds
+about 2\,GB, which is why the application checks free memory before loading it.
 
 The explanation is the cost of a draft step relative to a target step. We measured single-token
 decode steps of 23.6\,ms for the 0.5B draft and 28.5\,ms for the 1.5B target, a ratio $c=0.84$,

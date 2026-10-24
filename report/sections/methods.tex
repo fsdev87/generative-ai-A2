@@ -180,7 +180,56 @@ To control every step of cached decoding we implemented the Qwen2 forward pass o
 the trained weight tensors (embedding, projections, norms); only the linear layers are reused as
 modules. Per layer: $x \leftarrow h + W_o\,\mathrm{Attn}(\mathrm{RoPE}(W_q\bar h + b_q),
 \mathrm{RoPE}(W_k\bar h + b_k), W_v\bar h + b_v)$ with $\bar h = \mathrm{RMSNorm}(h)$, followed by
-$h \leftarrow x + W_d(\mathrm{SiLU}(W_g\bar x)\odot W_u\bar x)$.
+$h \leftarrow x + W_d(\mathrm{SiLU}(W_g\bar x)\odot W_u\bar x)$. Fig.~\ref{fig:layer} shows
+where the cache enters this computation, and Algorithm~\ref{alg:kv} the decoding loop built on it.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=2.2mm,
+  op/.style={draw, rounded corners=2pt, fill=green!7, font=\scriptsize, minimum height=5mm,
+             minimum width=27mm, align=center, inner sep=2pt},
+  mem/.style={draw, fill=blue!7, font=\scriptsize, align=center, inner sep=3pt},
+  arr/.style={-{Stealth[length=1.6mm]}, semithick}]
+\node[op] (in) {$T$ new tokens at positions $p..p{+}T{-}1$};
+\node[op, below=of in] (n1) {RMSNorm};
+\node[op, below=of n1] (qkv) {$W_q, W_k, W_v$ (+bias)};
+\node[op, below=of qkv] (rope) {RoPE at positions $p..p{+}T{-}1$};
+\node[op, below=of rope] (attn) {attention: 12 query heads,\\bottom-right causal mask};
+\node[op, below=of attn] (o) {$W_o$, residual add};
+\node[op, below=of o] (n2) {RMSNorm, SwiGLU MLP,\\residual add};
+\node[op, below=of n2] (out) {$\times 28$ layers $\rightarrow$ RMSNorm $\rightarrow$ LM head};
+\node[mem, right=17mm of qkv, yshift=-6mm, text width=19mm] (cache)
+  {\textbf{KV cache}\\(per layer)\\$K,V$ slots\\$0..L_{\max}{-}1$\\valid: $0..p{-}1$};
+\draw[arr] (in) -- (n1); \draw[arr] (n1) -- (qkv); \draw[arr] (qkv) -- (rope);
+\draw[arr] (rope) -- (attn); \draw[arr] (attn) -- (o); \draw[arr] (o) -- (n2); \draw[arr] (n2) -- (out);
+\draw[arr] (rope.east) -- node[above, font=\tiny, align=center, pos=0.58]{write $K,V$ to\\slots $p..p{+}T{-}1$}
+  ($(cache.west)+(0,-2mm)$);
+\draw[arr] (cache.south) |- node[pos=0.75, below, font=\tiny, align=center]{read slots $0..p{+}T{-}1$}
+  (attn.east);
+\end{tikzpicture}
+\caption{One decoder layer of our hand-written Qwen2 forward pass and its KV cache. New keys and
+values are rotated at their absolute positions and written into pre-allocated slots; attention reads
+all valid slots. After the call, \code{length} becomes $p{+}T$; \code{crop(n)} rolls it back.}
+\label{fig:layer}
+\end{figure}
+
+\begin{algorithm}[t]
+\caption{KV-cached greedy decoding (vs.\ the uncached reference)}
+\label{alg:kv}
+\begin{algorithmic}[1]
+\Require prompt $x$ of length $n$, budget $N$, end token EOS
+\State $C \gets$ pre-allocated cache for $n{+}N$ positions; \code{length} $\gets 0$
+\State $z \gets \textsc{Forward}(x, C, p{=}0)$ \Comment{prefill: fills slots $0..n{-}1$}
+\State $y_1 \gets \arg\max z_{n}$; $t \gets 1$
+\While{$t < N$ and $y_t \neq$ EOS}
+  \State $z \gets \textsc{Forward}([y_t], C, p{=}\code{length})$ \Comment{one token, one new slot}
+  \State $y_{t+1} \gets \arg\max z$; $t \gets t{+}1$
+\EndWhile
+\State \Return $y_1..y_t$
+\Statex \textit{Uncached reference:} each step runs $\textsc{Forward}(x\|y_{1..t}, \text{fresh } C, 0)$.
+\end{algorithmic}
+\end{algorithm}
 
 \textbf{Cache layout and growth.} The cache holds, for each of the 28 layers, a key and a value
 tensor of shape $(B, H_{kv}{=}2, L_{\max}, 128)$ that is \emph{pre-allocated} for the prompt length
