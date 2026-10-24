@@ -1,0 +1,24 @@
+% Project links, shown in a full-width box on page 1 (between the author block and the abstract).
+% To add the demo video: replace the \pending{...} text below with \url{https://...}.
+\newcommand{\pending}[1]{\textcolor{red}{\textbf{#1}}}
+\newcommand{\linkrow}[2]{\textbf{#1} & #2 \\[2pt]}
+
+\vspace{-4pt}
+\begin{center}
+\fbox{\begin{minipage}{0.96\textwidth}
+\vspace{4pt}
+\centering{\large\textbf{Project Links}}\\[6pt]
+\small
+\begin{tabular}{@{}p{0.27\textwidth}p{0.66\textwidth}@{}}
+\linkrow{GitHub repository}{\url{https://github.com/fsdev87/generative-ai-A2}}
+\linkrow{Demo video (5--7 min)}{\pending{[video link pending]}}
+\linkrow{Fine-tuned model (LoRA adapter)}{\url{https://huggingface.co/farazmust123/qwen2.5-1.5b-trialgpt-lora}}
+\linkrow{Draft model (speculative decoding)}{\url{https://huggingface.co/farazmust123/qwen2.5-0.5b-trialgpt-draft-lora}}
+\linkrow{Dataset}{\url{https://huggingface.co/datasets/ncbi/TrialGPT-Criterion-Annotations}}
+\linkrow{Split manifest}{\url{https://github.com/fsdev87/generative-ai-A2/blob/main/data/splits/split_manifest.json}}
+\linkrow{Run instructions}{\url{https://github.com/fsdev87/generative-ai-A2\#quick-start-application}}
+\end{tabular}
+\vspace{2pt}
+\end{minipage}}
+\end{center}
+\vspace{6pt}
