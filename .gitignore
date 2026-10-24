@@ -51,3 +51,6 @@ report/*.synctex.gz
 
 # Private study notes
 notes/
+
+# Submission package (uploaded to Classroom, not versioned)
+*.zip
