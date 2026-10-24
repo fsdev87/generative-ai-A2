@@ -12,13 +12,13 @@ Dockerized **React + FastAPI** application for screening and live inference benc
 
 | What | Where |
 |---|---|
+| **Demo video (5–7 min)** | **https://youtu.be/Pf9Voo3GEb8** |
 | Technical report (IEEE, LaTeX) | [report/main.pdf](report/main.pdf) — sources in [report/](report/) |
 | Fine-tuned adapter (target) | [farazmust123/qwen2.5-1.5b-trialgpt-lora](https://huggingface.co/farazmust123/qwen2.5-1.5b-trialgpt-lora) |
 | Fine-tuned adapter (draft) | [farazmust123/qwen2.5-0.5b-trialgpt-draft-lora](https://huggingface.co/farazmust123/qwen2.5-0.5b-trialgpt-draft-lora) |
 | Split manifest | [data/splits/split_manifest.json](data/splits/split_manifest.json) |
 | Training / evaluation / benchmark logs | [results/](results/) |
 | Decision and failure log | [docs/experiment_log.md](docs/experiment_log.md) |
-| Demo video (5–7 min) | *link added on submission* |
 
 ## Results (held-out test split, 206 criteria, greedy decoding)
 
